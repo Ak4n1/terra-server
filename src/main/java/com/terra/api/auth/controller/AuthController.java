@@ -1,6 +1,7 @@
 package com.terra.api.auth.controller;
 
 import com.terra.api.auth.dto.AuthSessionResponse;
+import com.terra.api.auth.dto.AuthClientConfigResponse;
 import com.terra.api.auth.dto.ForgotPasswordRequest;
 import com.terra.api.auth.dto.LoginRequest;
 import com.terra.api.auth.dto.ResendVerificationRequest;
@@ -22,6 +23,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import com.terra.api.security.config.JwtProperties;
+import com.terra.api.security.config.CsrfProperties;
 import com.terra.api.security.jwt.JwtAuthenticationException;
 import com.terra.api.security.jwt.JwtService;
 import com.terra.api.security.jwt.JwtTokenType;
@@ -46,6 +48,7 @@ public class AuthController {
     private final JwtService jwtService;
     private final JwtCookieService jwtCookieService;
     private final JwtProperties jwtProperties;
+    private final CsrfProperties csrfProperties;
     private final AccountSessionService accountSessionService;
     private final CsrfCookieService csrfCookieService;
     private final EmailVerificationService emailVerificationService;
@@ -56,6 +59,7 @@ public class AuthController {
                           JwtService jwtService,
                           JwtCookieService jwtCookieService,
                           JwtProperties jwtProperties,
+                          CsrfProperties csrfProperties,
                           AccountSessionService accountSessionService,
                           CsrfCookieService csrfCookieService,
                           EmailVerificationService emailVerificationService,
@@ -65,6 +69,7 @@ public class AuthController {
         this.jwtService = jwtService;
         this.jwtCookieService = jwtCookieService;
         this.jwtProperties = jwtProperties;
+        this.csrfProperties = csrfProperties;
         this.accountSessionService = accountSessionService;
         this.csrfCookieService = csrfCookieService;
         this.emailVerificationService = emailVerificationService;
@@ -76,6 +81,15 @@ public class AuthController {
         UserResponse user = authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.of("auth.verification_email_sent", messageResolver.get("auth.verification_email_sent"), user));
+    }
+
+    @GetMapping("/config")
+    public ResponseEntity<ApiResponse<AuthClientConfigResponse>> config() {
+        return ResponseEntity.ok(ApiResponse.of(
+                "auth.client_config",
+                "Auth client config",
+                new AuthClientConfigResponse(csrfProperties.getCookieName(), csrfProperties.getHeaderName())
+        ));
     }
 
     @PostMapping("/verify-email")

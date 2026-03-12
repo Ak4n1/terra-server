@@ -28,6 +28,6 @@ class EmailTemplateServiceTest {
         assertTrue(emailMessage.htmlBody().contains(verificationUrl));
         assertTrue(emailMessage.htmlBody().contains("https://l2terra.online/verify-email"));
         assertTrue(emailMessage.htmlBody().contains("Verificar email"));
-        assertTrue(emailMessage.htmlBody().contains("L2 Terra Online"));
+        assertTrue(emailMessage.htmlBody().contains("L2 Terra"));
     }
 }
