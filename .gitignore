@@ -1,0 +1,59 @@
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### Runtime ###
+*.log
+*.out
+*.err
+logs/
+hs_err_pid*
+replay_pid*
+*.h2.db
+*.mv.db
+*.trace.db
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+### OS ###
+.DS_Store
+Thumbs.db
+
+### Env ###
+.env
+.env.*
+!.env.example
+
+### Local docs ###
+NGINX_SECURITY_HEADERS_PLAN.md
+SECURITY_PRODUCTION_REVIEW.md
+STRUCTURE.md
+TESTING_PLAN.md
