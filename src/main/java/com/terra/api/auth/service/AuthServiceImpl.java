@@ -2,15 +2,21 @@ package com.terra.api.auth.service;
 
 import com.terra.api.auth.dto.LoginRequest;
 import com.terra.api.auth.dto.RegisterRequest;
+import com.terra.api.auth.dto.UpdatePreferredLanguageRequest;
 import com.terra.api.auth.dto.UserResponse;
 import com.terra.api.auth.entity.AccountMaster;
 import com.terra.api.auth.entity.Role;
 import com.terra.api.auth.entity.RoleName;
 import com.terra.api.auth.repository.AccountMasterRepository;
+import com.terra.api.common.exception.BadRequestException;
+import com.terra.api.common.i18n.model.SupportedLanguage;
+import com.terra.api.common.i18n.resolver.CurrentLanguageResolver;
+import com.terra.api.notifications.service.NotificationCommandService;
 import com.terra.api.auth.repository.RoleRepository;
 import com.terra.api.common.exception.ForbiddenException;
 import com.terra.api.common.exception.ResourceConflictException;
 import com.terra.api.common.exception.ResourceNotFoundException;
+import com.terra.api.realtime.service.RealtimeSessionRevocationService;
 import com.terra.api.security.service.AccountSessionService;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -30,6 +36,9 @@ public class AuthServiceImpl implements AuthService {
     private final AuthenticationManager authenticationManager;
     private final AccountSessionService accountSessionService;
     private final EmailVerificationService emailVerificationService;
+    private final RealtimeSessionRevocationService realtimeSessionRevocationService;
+    private final NotificationCommandService notificationCommandService;
+    private final CurrentLanguageResolver currentLanguageResolver;
 
     public AuthServiceImpl(
             AccountMasterRepository accountMasterRepository,
@@ -37,13 +46,19 @@ public class AuthServiceImpl implements AuthService {
             PasswordEncoder passwordEncoder,
             AuthenticationManager authenticationManager,
             AccountSessionService accountSessionService,
-            EmailVerificationService emailVerificationService) {
+            EmailVerificationService emailVerificationService,
+            RealtimeSessionRevocationService realtimeSessionRevocationService,
+            NotificationCommandService notificationCommandService,
+            CurrentLanguageResolver currentLanguageResolver) {
         this.accountMasterRepository = accountMasterRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.accountSessionService = accountSessionService;
         this.emailVerificationService = emailVerificationService;
+        this.realtimeSessionRevocationService = realtimeSessionRevocationService;
+        this.notificationCommandService = notificationCommandService;
+        this.currentLanguageResolver = currentLanguageResolver;
     }
 
     @Override
@@ -62,9 +77,11 @@ public class AuthServiceImpl implements AuthService {
         accountMaster.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         accountMaster.setEmailVerified(false);
         accountMaster.setRoles(Set.of(userRole));
+        accountMaster.setPreferredLanguage(currentLanguageResolver.resolve());
 
         AccountMaster savedAccountMaster = accountMasterRepository.save(accountMaster);
         emailVerificationService.createOrRefreshEmailVerification(savedAccountMaster);
+        notificationCommandService.createWelcomeRegistered(savedAccountMaster);
         return toResponse(savedAccountMaster);
     }
 
@@ -107,6 +124,17 @@ public class AuthServiceImpl implements AuthService {
         AccountMaster accountMaster = getCurrentUserAccount(email);
         accountMaster.setTokenVersion(accountMaster.getTokenVersion() + 1);
         accountSessionService.revokeAllSessions(accountMaster);
+        realtimeSessionRevocationService.revokeAccountSessions(accountMaster.getId(), "account_sessions_revoked");
+    }
+
+    @Override
+    @Transactional
+    public UserResponse updatePreferredLanguage(String email, UpdatePreferredLanguageRequest request) {
+        SupportedLanguage language = SupportedLanguage.findByCode(request.language())
+                .orElseThrow(() -> new BadRequestException("auth.preferred_language_invalid"));
+        AccountMaster accountMaster = getCurrentUserAccount(email);
+        accountMaster.setPreferredLanguage(language);
+        return toResponse(accountMasterRepository.save(accountMaster));
     }
 
     private UserResponse toResponse(AccountMaster user) {
@@ -115,6 +143,7 @@ public class AuthServiceImpl implements AuthService {
                 user.getEmail(),
                 user.isEnabled(),
                 user.isEmailVerified(),
+                user.getPreferredLanguage().getCode(),
                 user.getRoles().stream().map(role -> role.getName().name()).collect(Collectors.toSet()),
                 user.getCreatedAt());
     }

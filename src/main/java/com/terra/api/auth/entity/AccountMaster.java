@@ -1,7 +1,10 @@
 package com.terra.api.auth.entity;
 
+import com.terra.api.common.i18n.model.SupportedLanguage;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -43,6 +46,10 @@ public class AccountMaster {
     @Column(name = "token_version", nullable = false)
     private long tokenVersion;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "preferred_language", nullable = false, length = 8, columnDefinition = "VARCHAR(8) DEFAULT 'US'")
+    private SupportedLanguage preferredLanguage = SupportedLanguage.defaultLanguage();
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "accounts_master_role",
@@ -55,6 +62,9 @@ public class AccountMaster {
     void onCreate() {
         createdAt = Instant.now();
         tokenVersion = 0L;
+        if (preferredLanguage == null) {
+            preferredLanguage = SupportedLanguage.defaultLanguage();
+        }
     }
 
     public Long getId() {
@@ -115,5 +125,13 @@ public class AccountMaster {
 
     public void setTokenVersion(long tokenVersion) {
         this.tokenVersion = tokenVersion;
+    }
+
+    public SupportedLanguage getPreferredLanguage() {
+        return preferredLanguage;
+    }
+
+    public void setPreferredLanguage(SupportedLanguage preferredLanguage) {
+        this.preferredLanguage = preferredLanguage;
     }
 }

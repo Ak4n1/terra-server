@@ -1,6 +1,7 @@
 package com.terra.api.common.i18n.model;
 
 import java.util.Arrays;
+import java.util.Optional;
 
 public enum SupportedLanguage {
     US("us"),
@@ -44,5 +45,16 @@ public enum SupportedLanguage {
                 .filter(language -> language.code.equals(candidate))
                 .findFirst()
                 .orElse(defaultLanguage());
+    }
+
+    public static Optional<SupportedLanguage> findByCode(String value) {
+        if (value == null || value.isBlank()) {
+            return Optional.empty();
+        }
+
+        String normalizedValue = value.trim().toLowerCase();
+        return Arrays.stream(values())
+                .filter(language -> language.code.equals(normalizedValue))
+                .findFirst();
     }
 }

@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS account_realtime_session (
+    realtime_session_pk BIGINT NOT NULL AUTO_INCREMENT,
+    realtime_session_id VARCHAR(64) NOT NULL,
+    account_id BIGINT NOT NULL,
+    account_session_id BIGINT NOT NULL,
+    node_id VARCHAR(64) NOT NULL,
+    status VARCHAR(16) NOT NULL,
+    origin VARCHAR(255) NOT NULL,
+    client_ip VARCHAR(64) NOT NULL,
+    user_agent_hash VARCHAR(128) NULL,
+    connected_at TIMESTAMP NOT NULL,
+    last_seen_at TIMESTAMP NOT NULL,
+    closed_at TIMESTAMP NULL,
+    close_reason VARCHAR(128) NULL,
+    CONSTRAINT pk_account_realtime_session PRIMARY KEY (realtime_session_pk),
+    CONSTRAINT uk_account_realtime_session_id UNIQUE (realtime_session_id),
+    CONSTRAINT fk_account_realtime_session_account FOREIGN KEY (account_id) REFERENCES account_master (account_id),
+    CONSTRAINT fk_account_realtime_session_account_session FOREIGN KEY (account_session_id) REFERENCES accounts_master_session (session_id),
+    INDEX idx_account_realtime_session_account_status (account_id, status),
+    INDEX idx_account_realtime_session_account_session_status (account_session_id, status),
+    INDEX idx_account_realtime_session_status (status)
+);

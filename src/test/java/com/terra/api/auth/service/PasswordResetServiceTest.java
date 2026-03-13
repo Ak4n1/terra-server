@@ -13,6 +13,7 @@ import com.terra.api.mail.service.AsyncMailService;
 import com.terra.api.mail.service.EmailActionCooldownService;
 import com.terra.api.mail.service.EmailMessage;
 import com.terra.api.mail.service.EmailTemplateService;
+import com.terra.api.realtime.service.RealtimeSessionRevocationService;
 import com.terra.api.security.service.AccountSessionService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -60,6 +61,9 @@ class PasswordResetServiceTest {
 
     @Mock
     private AccountSessionService accountSessionService;
+
+    @Mock
+    private RealtimeSessionRevocationService realtimeSessionRevocationService;
 
     @InjectMocks
     private PasswordResetService passwordResetService;
@@ -124,6 +128,7 @@ class PasswordResetServiceTest {
         assertEquals("encoded-password", accountMaster.getPasswordHash());
         assertEquals(3L, accountMaster.getTokenVersion());
         verify(accountSessionService).revokeAllSessions(accountMaster);
+        verify(realtimeSessionRevocationService).revokeAccountSessions(7L, "password_reset");
     }
 
     private AccountMaster account(Long id, String email) {

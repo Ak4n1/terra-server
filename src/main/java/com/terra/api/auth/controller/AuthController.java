@@ -8,9 +8,11 @@ import com.terra.api.auth.dto.ResendVerificationRequest;
 import com.terra.api.auth.dto.RefreshSessionResponse;
 import com.terra.api.auth.dto.RegisterRequest;
 import com.terra.api.auth.dto.ResetPasswordRequest;
+import com.terra.api.auth.dto.UpdatePreferredLanguageRequest;
 import com.terra.api.auth.dto.UserResponse;
 import com.terra.api.auth.dto.VerifyEmailRequest;
 import com.terra.api.auth.entity.AccountMaster;
+import com.terra.api.auth.entity.AccountSession;
 import com.terra.api.auth.service.AuthService;
 import com.terra.api.auth.service.EmailVerificationService;
 import com.terra.api.auth.service.PasswordResetService;
@@ -27,6 +29,7 @@ import com.terra.api.security.config.CsrfProperties;
 import com.terra.api.security.jwt.JwtAuthenticationException;
 import com.terra.api.security.jwt.JwtService;
 import com.terra.api.security.jwt.JwtTokenType;
+import com.terra.api.realtime.service.RealtimeSessionRevocationService;
 import com.terra.api.security.service.AccountSessionService;
 import com.terra.api.security.service.CsrfCookieService;
 import com.terra.api.security.service.JwtCookieService;
@@ -35,6 +38,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -53,6 +57,7 @@ public class AuthController {
     private final CsrfCookieService csrfCookieService;
     private final EmailVerificationService emailVerificationService;
     private final PasswordResetService passwordResetService;
+    private final RealtimeSessionRevocationService realtimeSessionRevocationService;
 
     public AuthController(AuthService authService,
                           MessageResolver messageResolver,
@@ -63,7 +68,8 @@ public class AuthController {
                           AccountSessionService accountSessionService,
                           CsrfCookieService csrfCookieService,
                           EmailVerificationService emailVerificationService,
-                          PasswordResetService passwordResetService) {
+                          PasswordResetService passwordResetService,
+                          RealtimeSessionRevocationService realtimeSessionRevocationService) {
         this.authService = authService;
         this.messageResolver = messageResolver;
         this.jwtService = jwtService;
@@ -74,6 +80,7 @@ public class AuthController {
         this.csrfCookieService = csrfCookieService;
         this.emailVerificationService = emailVerificationService;
         this.passwordResetService = passwordResetService;
+        this.realtimeSessionRevocationService = realtimeSessionRevocationService;
     }
 
     @PostMapping("/register")
@@ -176,7 +183,17 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Void>> logout(HttpServletRequest request) {
         String refreshToken = extractCookieValue(request, jwtProperties.getRefreshCookieName());
         if (refreshToken != null && !refreshToken.isBlank()) {
-            accountSessionService.revokeSession(refreshToken);
+            try {
+                AccountSession accountSession = accountSessionService.getActiveSession(refreshToken);
+                accountSessionService.revokeSession(refreshToken);
+                realtimeSessionRevocationService.revokeAccountSession(
+                        accountSession.getId(),
+                        accountSession.getAccount().getId(),
+                        "logout"
+                );
+            } catch (JwtAuthenticationException ignored) {
+                accountSessionService.revokeSession(refreshToken);
+            }
         }
 
         HttpHeaders headers = new HttpHeaders();
@@ -205,6 +222,17 @@ public class AuthController {
     public ResponseEntity<ApiResponse<UserResponse>> me(Authentication authentication) {
         UserResponse user = authService.getCurrentUser(authentication.getName());
         return ResponseEntity.ok(ApiResponse.of("auth.current_user", messageResolver.get("auth.current_user"), user));
+    }
+
+    @PatchMapping("/preferred-language")
+    public ResponseEntity<ApiResponse<UserResponse>> updatePreferredLanguage(Authentication authentication,
+                                                                             @RequestBody UpdatePreferredLanguageRequest request) {
+        UserResponse user = authService.updatePreferredLanguage(authentication.getName(), request);
+        return ResponseEntity.ok(ApiResponse.of(
+                "auth.preferred_language_updated",
+                messageResolver.get("auth.preferred_language_updated"),
+                user
+        ));
     }
 
     private String extractCookieValue(HttpServletRequest request, String cookieName) {

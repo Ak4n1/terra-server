@@ -111,8 +111,11 @@ public class SecurityConfig {
                                 "/api/auth/refresh",
                                 "/api/auth/logout"
                         ).permitAll()
-                        .requestMatchers("/api/auth/logout-all").hasRole("USER")
-                        .requestMatchers("/api/auth/me").hasRole("USER")
+                        .requestMatchers("/api/test/notifications/**").permitAll()
+                        .requestMatchers("/api/admin/notifications/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
+                        .requestMatchers("/api/auth/logout-all").hasAnyRole("USER", "ADMIN", "SUPER_ADMIN")
+                        .requestMatchers("/api/auth/me", "/api/auth/preferred-language").hasAnyRole("USER", "ADMIN", "SUPER_ADMIN")
+                        .requestMatchers("/api/notifications/**").hasAnyRole("USER", "ADMIN", "SUPER_ADMIN")
                         .anyRequest().permitAll())
                 .headers(headers -> {
                     headers.cacheControl(Customizer.withDefaults());

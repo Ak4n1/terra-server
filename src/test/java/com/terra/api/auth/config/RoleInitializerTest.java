@@ -3,6 +3,7 @@ package com.terra.api.auth.config;
 import com.terra.api.auth.repository.AccountMasterRepository;
 import com.terra.api.auth.repository.AccountSessionRepository;
 import com.terra.api.auth.repository.AccountVerificationRepository;
+import com.terra.api.notifications.repository.AccountNotificationRepository;
 import com.terra.api.auth.entity.RoleName;
 import com.terra.api.auth.repository.RoleRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,8 +34,12 @@ class RoleInitializerTest {
     @Autowired
     private AccountVerificationRepository accountVerificationRepository;
 
+    @Autowired
+    private AccountNotificationRepository accountNotificationRepository;
+
     @BeforeEach
     void setUp() {
+        accountNotificationRepository.deleteAll();
         accountSessionRepository.deleteAll();
         accountVerificationRepository.deleteAll();
         accountMasterRepository.deleteAll();

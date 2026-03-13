@@ -13,6 +13,7 @@ import com.terra.api.mail.service.AsyncMailService;
 import com.terra.api.mail.service.EmailActionCooldownService;
 import com.terra.api.mail.service.EmailMessage;
 import com.terra.api.mail.service.EmailTemplateService;
+import com.terra.api.realtime.service.RealtimeSessionRevocationService;
 import com.terra.api.security.service.AccountSessionService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -36,6 +37,7 @@ public class PasswordResetService {
     private final CurrentLanguageResolver currentLanguageResolver;
     private final PasswordEncoder passwordEncoder;
     private final AccountSessionService accountSessionService;
+    private final RealtimeSessionRevocationService realtimeSessionRevocationService;
 
     public PasswordResetService(AccountMasterRepository accountMasterRepository,
                                 VerificationTokenService verificationTokenService,
@@ -45,7 +47,8 @@ public class PasswordResetService {
                                 EmailActionCooldownService emailActionCooldownService,
                                 CurrentLanguageResolver currentLanguageResolver,
                                 PasswordEncoder passwordEncoder,
-                                AccountSessionService accountSessionService) {
+                                AccountSessionService accountSessionService,
+                                RealtimeSessionRevocationService realtimeSessionRevocationService) {
         this.accountMasterRepository = accountMasterRepository;
         this.verificationTokenService = verificationTokenService;
         this.emailTemplateService = emailTemplateService;
@@ -55,6 +58,7 @@ public class PasswordResetService {
         this.currentLanguageResolver = currentLanguageResolver;
         this.passwordEncoder = passwordEncoder;
         this.accountSessionService = accountSessionService;
+        this.realtimeSessionRevocationService = realtimeSessionRevocationService;
     }
 
     @Transactional
@@ -111,5 +115,6 @@ public class PasswordResetService {
         accountMaster.setTokenVersion(accountMaster.getTokenVersion() + 1);
         verification.setUsedAt(Instant.now());
         accountSessionService.revokeAllSessions(accountMaster);
+        realtimeSessionRevocationService.revokeAccountSessions(accountMaster.getId(), "password_reset");
     }
 }
