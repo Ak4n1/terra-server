@@ -25,7 +25,6 @@ import jakarta.servlet.http.Cookie;
 import java.util.List;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -72,25 +71,22 @@ class NotificationAdminIntegrationTest {
         accountMasterRepository.deleteAll();
     }
 
-    // Verifica que un admin pueda listar solo las plantillas habilitadas para envios administrativos.
+    // Verifica que un admin vea el catalogo administrativo con las plantillas activas aprobadas.
     @Test
     void shouldListAdminTemplatesForAdminAccount() throws Exception {
         createVerifiedUser("notify-admin@l2terra.online", RoleName.ADMIN);
         SessionCookies cookies = login("notify-admin@l2terra.online");
 
-                mockMvc.perform(get("/api/admin/notifications/templates")
+        mockMvc.perform(get("/api/admin/notifications/templates")
                         .cookie(cookies.accessCookie()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("notifications.admin_templates_loaded"))
-                .andExpect(jsonPath("$.data.length()").value(13))
-                .andExpect(jsonPath("$.data[0].code").value("system.test_notification"))
-                .andExpect(jsonPath("$.data[0].allowedTarget").value("BOTH"))
-                .andExpect(jsonPath("$.data[3].code").value("admin.general_announcement"));
+                .andExpect(jsonPath("$.data.length()").value(12))
+                .andExpect(jsonPath("$.data[0].code").value("system.admin_test_notification"));
     }
 
-    // Verifica que un admin pueda despachar una plantilla permitida y que la notificacion quede persistida.
     @Test
-    void shouldDispatchAdminNotificationForAllowedTemplate() throws Exception {
+    void shouldListRealAdminAuditEntries() throws Exception {
         createVerifiedUser("notify-admin@l2terra.online", RoleName.ADMIN);
         createVerifiedUser("notify-target@l2terra.online", RoleName.USER);
         SessionCookies cookies = login("notify-admin@l2terra.online");
@@ -102,18 +98,84 @@ class NotificationAdminIntegrationTest {
                         .content("""
                                 {
                                   "email": "notify-target@l2terra.online",
-                                  "template": "admin.contact_request",
+                                  "template": "system.admin_test_notification",
+                                  "params": {}
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/admin/notifications/audit?page=0&size=4")
+                        .cookie(cookies.accessCookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("notifications.admin_audit_loaded"))
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].template").value("system.admin_test_notification"))
+                .andExpect(jsonPath("$.data.items[0].recipientEmail").value("notify-target@l2terra.online"))
+                .andExpect(jsonPath("$.data.summary.totalEntries").value(1))
+                .andExpect(jsonPath("$.data.summary.uniqueRecipients").value(1))
+                .andExpect(jsonPath("$.data.summary.uniqueTemplates").value(1));
+    }
+
+    @Test
+    void shouldFilterAdminAuditEntriesByTemplateStatusAndDateRange() throws Exception {
+        createVerifiedUser("notify-admin@l2terra.online", RoleName.ADMIN);
+        createVerifiedUser("notify-target@l2terra.online", RoleName.USER);
+        SessionCookies cookies = login("notify-admin@l2terra.online");
+
+        mockMvc.perform(post("/api/admin/notifications")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .cookie(cookies.accessCookie(), cookies.refreshCookie(), cookies.csrfCookie())
+                        .header("X-CSRF-TOKEN", cookies.csrfToken())
+                        .content("""
+                                {
+                                  "email": "notify-target@l2terra.online",
+                                  "template": "system.admin_test_notification",
+                                  "params": {}
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/admin/notifications/audit?page=0&size=4&template=system.admin_test_notification&status=UNREAD&dateFrom=2026-03-01&dateTo=2026-03-31")
+                        .cookie(cookies.accessCookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.summary.totalEntries").value(1))
+                .andExpect(jsonPath("$.data.summary.unreadEntries").value(1));
+
+        mockMvc.perform(get("/api/admin/notifications/audit?page=0&size=4&template=system.admin_test_notification&status=READ&dateFrom=2026-03-01&dateTo=2026-03-31")
+                        .cookie(cookies.accessCookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(0))
+                .andExpect(jsonPath("$.data.summary.totalEntries").value(0));
+    }
+
+    // Verifica que una plantilla individual de soporte devuelva accion externa con URL segura.
+    @Test
+    void shouldDispatchIndividualSupportNotificationWithExternalAction() throws Exception {
+        createVerifiedUser("notify-admin@l2terra.online", RoleName.ADMIN);
+        createVerifiedUser("notify-target@l2terra.online", RoleName.USER);
+        SessionCookies cookies = login("notify-admin@l2terra.online");
+
+        mockMvc.perform(post("/api/admin/notifications")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .cookie(cookies.accessCookie(), cookies.refreshCookie(), cookies.csrfCookie())
+                        .header("X-CSRF-TOKEN", cookies.csrfToken())
+                        .content("""
+                                {
+                                  "email": "notify-target@l2terra.online",
+                                  "template": "account.contact_support",
                                   "params": {
-                                    "message": "Necesitamos hablar con vos sobre tu cuenta."
+                                    "channelLabel": "Discord",
+                                    "url": "https://discord.gg/terra-support"
                                   }
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("notifications.admin_dispatch_success"))
-                .andExpect(jsonPath("$.data.notification.type").value("admin.contact_request"))
-                .andExpect(jsonPath("$.data.notification.params.message").value("Necesitamos hablar con vos sobre tu cuenta."));
-
-        assertEquals(1, accountNotificationRepository.count());
+                .andExpect(jsonPath("$.data.notification.type").value("account.contact_support"))
+                .andExpect(jsonPath("$.data.notification.action.type").value("external_url"))
+                .andExpect(jsonPath("$.data.notification.action.labelKey").value("notifications.actions.openSupport"))
+                .andExpect(jsonPath("$.data.notification.action.payload.url").value("https://discord.gg/terra-support"));
     }
 
     // Verifica que una cuenta comun no pueda acceder al endpoint administrativo de notificaciones.
@@ -127,9 +189,9 @@ class NotificationAdminIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
-    // Verifica que un admin pueda hacer broadcast por rol y que el sistema informe cuantas cuentas recibieron la notificacion.
+    // Verifica que el backend rechace broadcast cuando el catalogo admin esta vacio.
     @Test
-    void shouldBroadcastNotificationByRole() throws Exception {
+    void shouldRejectBroadcastWhenTemplateIsNotAdminEnabled() throws Exception {
         createVerifiedUser("notify-admin@l2terra.online", RoleName.ADMIN);
         createVerifiedUser("notify-user-a@l2terra.online", RoleName.USER);
         createVerifiedUser("notify-user-b@l2terra.online", RoleName.USER);
@@ -141,41 +203,38 @@ class NotificationAdminIntegrationTest {
                         .header("X-CSRF-TOKEN", cookies.csrfToken())
                         .content("""
                                 {
-                                  "template": "system.security_review_required",
-                                  "params": {
-                                    "reason": "new_login_detected"
-                                  },
-                                  "targetType": "ROLE",
-                                  "targetValue": "USER"
-                                }
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value("notifications.admin_broadcast_success"))
-                .andExpect(jsonPath("$.data.deliveredCount").value(2));
-    }
-
-    // Verifica que el backend rechace una plantilla solo individual cuando se intenta usar en broadcast.
-    @Test
-    void shouldRejectBroadcastForIndividualOnlyTemplate() throws Exception {
-        createVerifiedUser("notify-admin@l2terra.online", RoleName.ADMIN);
-        SessionCookies cookies = login("notify-admin@l2terra.online");
-
-        mockMvc.perform(post("/api/admin/notifications/broadcast")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .cookie(cookies.accessCookie(), cookies.refreshCookie(), cookies.csrfCookie())
-                        .header("X-CSRF-TOKEN", cookies.csrfToken())
-                        .content("""
-                                {
-                                  "template": "admin.contact_request",
-                                  "params": {
-                                    "message": "Necesitamos hablar con vos."
-                                  },
+                                  "template": "system.test_notification",
+                                  "params": {},
                                   "targetType": "ROLE",
                                   "targetValue": "USER"
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("notifications.admin_template_target_not_allowed"));
+                .andExpect(jsonPath("$.code").value("notifications.admin_template_not_allowed"));
+    }
+
+    // Verifica que el backend rechace un envio individual cuando la plantilla no esta habilitada para admin.
+    @Test
+    void shouldRejectDispatchWhenTemplateIsNotAdminEnabled() throws Exception {
+        createVerifiedUser("notify-admin@l2terra.online", RoleName.ADMIN);
+        createVerifiedUser("notify-target@l2terra.online", RoleName.USER);
+        SessionCookies cookies = login("notify-admin@l2terra.online");
+
+        mockMvc.perform(post("/api/admin/notifications")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .cookie(cookies.accessCookie(), cookies.refreshCookie(), cookies.csrfCookie())
+                        .header("X-CSRF-TOKEN", cookies.csrfToken())
+                        .content("""
+                                {
+                                  "email": "notify-target@l2terra.online",
+                                  "template": "system.test_notification",
+                                  "params": {
+                                    "message": "Necesitamos hablar con vos."
+                                  }
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("notifications.admin_template_not_allowed"));
     }
 
     private AccountMaster createVerifiedUser(String email, RoleName roleName) {

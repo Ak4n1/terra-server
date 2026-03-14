@@ -4,12 +4,14 @@ import com.terra.api.common.i18n.message.MessageResolver;
 import com.terra.api.common.response.ApiResponse;
 import com.terra.api.notifications.dto.NotificationBroadcastRequest;
 import com.terra.api.notifications.dto.NotificationBroadcastResponse;
+import com.terra.api.notifications.dto.NotificationAdminAuditListResponse;
 import com.terra.api.notifications.dto.NotificationDispatchRequest;
 import com.terra.api.notifications.dto.NotificationMutationResponse;
 import com.terra.api.notifications.dto.NotificationTemplateResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -35,6 +37,21 @@ public class NotificationAdminController {
         return ResponseEntity.ok(ApiResponse.of(
                 "notifications.admin_templates_loaded",
                 messageResolver.get("notifications.admin_templates_loaded"),
+                response
+        ));
+    }
+
+    @GetMapping("/audit")
+    public ResponseEntity<ApiResponse<NotificationAdminAuditListResponse>> listAudit(@RequestParam(defaultValue = "0") int page,
+                                                                                     @RequestParam(defaultValue = "4") int size,
+                                                                                     @RequestParam(required = false) String template,
+                                                                                     @RequestParam(required = false) String status,
+                                                                                     @RequestParam(required = false) String dateFrom,
+                                                                                     @RequestParam(required = false) String dateTo) {
+        NotificationAdminAuditListResponse response = notificationAdminService.listAudit(page, size, template, status, dateFrom, dateTo);
+        return ResponseEntity.ok(ApiResponse.of(
+                "notifications.admin_audit_loaded",
+                messageResolver.get("notifications.admin_audit_loaded"),
                 response
         ));
     }

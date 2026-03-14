@@ -1,5 +1,6 @@
 package com.terra.api.notifications.template;
 
+import com.terra.api.notifications.domain.NotificationActionType;
 import com.terra.api.notifications.domain.NotificationCategory;
 import com.terra.api.notifications.domain.NotificationSeverity;
 
@@ -15,138 +16,177 @@ public enum NotificationTemplateCode {
             "notifications.systemTest.title",
             "notifications.systemTest.body",
             List.of(),
-            true,
+            null,
+            null,
+            null,
+            false,
             true
     ),
-    SYSTEM_MAINTENANCE_SCHEDULED(
-            "system.maintenance_scheduled",
+    SYSTEM_ADMIN_TEST_NOTIFICATION(
+            "system.admin_test_notification",
+            NotificationCategory.SYSTEM,
+            NotificationSeverity.INFO,
+            NotificationTemplateTarget.BOTH,
+            "notifications.adminTest.title",
+            "notifications.adminTest.body",
+            List.of(),
+            null,
+            null,
+            null,
+            true,
+            false
+    ),
+    SYSTEM_MAINTENANCE_STARTS_AT(
+            "system.maintenance_starts_at",
             NotificationCategory.SYSTEM,
             NotificationSeverity.INFO,
             NotificationTemplateTarget.BROADCAST,
-            "notifications.maintenanceScheduled.title",
-            "notifications.maintenanceScheduled.body",
+            "notifications.maintenanceStartsAt.title",
+            "notifications.maintenanceStartsAt.body",
             List.of("date", "time", "timezone"),
+            null,
+            null,
+            null,
             true,
             false
     ),
-    SYSTEM_SECURITY_REVIEW_REQUIRED(
-            "system.security_review_required",
-            NotificationCategory.SYSTEM,
-            NotificationSeverity.INFO,
-            NotificationTemplateTarget.BOTH,
-            "notifications.securityReviewRequired.title",
-            "notifications.securityReviewRequired.body",
-            List.of("reason"),
-            true,
-            false
-    ),
-    ADMIN_GENERAL_ANNOUNCEMENT(
-            "admin.general_announcement",
-            NotificationCategory.SYSTEM,
-            NotificationSeverity.INFO,
-            NotificationTemplateTarget.BOTH,
-            "notifications.adminGeneralAnnouncement.title",
-            "notifications.adminGeneralAnnouncement.body",
-            List.of("headline", "message"),
-            true,
-            false
-    ),
-    ADMIN_CONTACT_REQUEST(
-            "admin.contact_request",
-            NotificationCategory.ACCOUNT,
-            NotificationSeverity.INFO,
-            NotificationTemplateTarget.INDIVIDUAL,
-            "notifications.adminContactRequest.title",
-            "notifications.adminContactRequest.body",
-            List.of("message"),
-            true,
-            false
-    ),
-    ADMIN_ACCOUNT_REVIEW_REQUEST(
-            "admin.account_review_request",
-            NotificationCategory.ACCOUNT,
-            NotificationSeverity.INFO,
-            NotificationTemplateTarget.INDIVIDUAL,
-            "notifications.adminAccountReviewRequest.title",
-            "notifications.adminAccountReviewRequest.body",
-            List.of("message", "reason"),
-            true,
-            false
-    ),
-    ADMIN_SECURITY_NOTICE(
-            "admin.security_notice",
-            NotificationCategory.SYSTEM,
-            NotificationSeverity.INFO,
-            NotificationTemplateTarget.BOTH,
-            "notifications.adminSecurityNotice.title",
-            "notifications.adminSecurityNotice.body",
-            List.of("message", "actionLabel"),
-            true,
-            false
-    ),
-    ADMIN_MAINTENANCE_NOTICE(
-            "admin.maintenance_notice",
+    SYSTEM_MAINTENANCE_WINDOW(
+            "system.maintenance_window",
             NotificationCategory.SYSTEM,
             NotificationSeverity.INFO,
             NotificationTemplateTarget.BROADCAST,
-            "notifications.adminMaintenanceNotice.title",
-            "notifications.adminMaintenanceNotice.body",
-            List.of("date", "time", "message"),
+            "notifications.maintenanceWindow.title",
+            "notifications.maintenanceWindow.body",
+            List.of("startDate", "startTime", "endDate", "endTime", "timezone"),
+            null,
+            null,
+            null,
             true,
             false
     ),
-    ADMIN_SERVICE_ISSUE_NOTICE(
-            "admin.service_issue_notice",
+    SYSTEM_MAINTENANCE_ALL_DAY(
+            "system.maintenance_all_day",
             NotificationCategory.SYSTEM,
             NotificationSeverity.INFO,
             NotificationTemplateTarget.BROADCAST,
-            "notifications.adminServiceIssueNotice.title",
-            "notifications.adminServiceIssueNotice.body",
-            List.of("module", "message"),
+            "notifications.maintenanceAllDay.title",
+            "notifications.maintenanceAllDay.body",
+            List.of("date", "timezone"),
+            null,
+            null,
+            null,
             true,
             false
     ),
-    ADMIN_SERVICE_RESTORED_NOTICE(
-            "admin.service_restored_notice",
+    SYSTEM_MAINTENANCE_EXTENDED_UNTIL(
+            "system.maintenance_extended_until",
+            NotificationCategory.SYSTEM,
+            NotificationSeverity.INFO,
+            NotificationTemplateTarget.BROADCAST,
+            "notifications.maintenanceExtendedUntil.title",
+            "notifications.maintenanceExtendedUntil.body",
+            List.of("date", "time", "timezone"),
+            null,
+            null,
+            null,
+            true,
+            false
+    ),
+    SYSTEM_MAINTENANCE_COMPLETED_AT(
+            "system.maintenance_completed_at",
             NotificationCategory.SYSTEM,
             NotificationSeverity.SUCCESS,
             NotificationTemplateTarget.BROADCAST,
-            "notifications.adminServiceRestoredNotice.title",
-            "notifications.adminServiceRestoredNotice.body",
-            List.of("module", "message"),
+            "notifications.maintenanceCompletedAt.title",
+            "notifications.maintenanceCompletedAt.body",
+            List.of("date", "time", "timezone"),
+            null,
+            null,
+            null,
             true,
             false
     ),
-    ADMIN_PAYMENT_STATUS_NOTICE(
-            "admin.payment_status_notice",
-            NotificationCategory.ACCOUNT,
-            NotificationSeverity.INFO,
-            NotificationTemplateTarget.INDIVIDUAL,
-            "notifications.adminPaymentStatusNotice.title",
-            "notifications.adminPaymentStatusNotice.body",
-            List.of("message"),
-            true,
-            false
-    ),
-    ADMIN_EVENT_INVITATION(
-            "admin.event_invitation",
-            NotificationCategory.SYSTEM,
-            NotificationSeverity.INFO,
-            NotificationTemplateTarget.BOTH,
-            "notifications.adminEventInvitation.title",
-            "notifications.adminEventInvitation.body",
-            List.of("eventName", "message"),
-            true,
-            false
-    ),
-    ADMIN_POLICY_UPDATE_NOTICE(
-            "admin.policy_update_notice",
+    SYSTEM_EMERGENCY_MAINTENANCE_UNTIL(
+            "system.emergency_maintenance_until",
             NotificationCategory.SYSTEM,
             NotificationSeverity.INFO,
             NotificationTemplateTarget.BROADCAST,
-            "notifications.adminPolicyUpdateNotice.title",
-            "notifications.adminPolicyUpdateNotice.body",
-            List.of("headline", "message"),
+            "notifications.emergencyMaintenanceUntil.title",
+            "notifications.emergencyMaintenanceUntil.body",
+            List.of("date", "time", "timezone"),
+            null,
+            null,
+            null,
+            true,
+            false
+    ),
+    SYSTEM_RESTART_STARTS_AT(
+            "system.restart_starts_at",
+            NotificationCategory.SYSTEM,
+            NotificationSeverity.INFO,
+            NotificationTemplateTarget.BROADCAST,
+            "notifications.restartStartsAt.title",
+            "notifications.restartStartsAt.body",
+            List.of("date", "time", "timezone"),
+            null,
+            null,
+            null,
+            true,
+            false
+    ),
+    SYSTEM_SERVER_REOPENING_AT(
+            "system.server_reopening_at",
+            NotificationCategory.SYSTEM,
+            NotificationSeverity.SUCCESS,
+            NotificationTemplateTarget.BROADCAST,
+            "notifications.serverReopeningAt.title",
+            "notifications.serverReopeningAt.body",
+            List.of("date", "time", "timezone"),
+            null,
+            null,
+            null,
+            true,
+            false
+    ),
+    SYSTEM_EVENT_STARTS_AT(
+            "system.event_starts_at",
+            NotificationCategory.SYSTEM,
+            NotificationSeverity.INFO,
+            NotificationTemplateTarget.BROADCAST,
+            "notifications.eventStartsAt.title",
+            "notifications.eventStartsAt.body",
+            List.of("eventName", "date", "time", "timezone"),
+            null,
+            null,
+            null,
+            true,
+            false
+    ),
+    SYSTEM_EVENT_ENDS_AT(
+            "system.event_ends_at",
+            NotificationCategory.SYSTEM,
+            NotificationSeverity.INFO,
+            NotificationTemplateTarget.BROADCAST,
+            "notifications.eventEndsAt.title",
+            "notifications.eventEndsAt.body",
+            List.of("eventName", "date", "time", "timezone"),
+            null,
+            null,
+            null,
+            true,
+            false
+    ),
+    ACCOUNT_CONTACT_SUPPORT(
+            "account.contact_support",
+            NotificationCategory.ACCOUNT,
+            NotificationSeverity.INFO,
+            NotificationTemplateTarget.INDIVIDUAL,
+            "notifications.contactSupport.title",
+            "notifications.contactSupport.body",
+            List.of("channelLabel", "url"),
+            NotificationActionType.EXTERNAL_URL,
+            "notifications.actions.openSupport",
+            "url",
             true,
             false
     ),
@@ -158,6 +198,9 @@ public enum NotificationTemplateCode {
             "notifications.welcomeRegistered.title",
             "notifications.welcomeRegistered.body",
             List.of(),
+            null,
+            null,
+            null,
             false,
             false
     );
@@ -169,6 +212,9 @@ public enum NotificationTemplateCode {
     private final String titleKey;
     private final String bodyKey;
     private final List<String> paramKeys;
+    private final NotificationActionType actionType;
+    private final String actionLabelKey;
+    private final String actionUrlParamKey;
     private final boolean adminEnabled;
     private final boolean publicTestEnabled;
 
@@ -179,6 +225,9 @@ public enum NotificationTemplateCode {
                              String titleKey,
                              String bodyKey,
                              List<String> paramKeys,
+                             NotificationActionType actionType,
+                             String actionLabelKey,
+                             String actionUrlParamKey,
                              boolean adminEnabled,
                              boolean publicTestEnabled) {
         this.wireValue = wireValue;
@@ -188,6 +237,9 @@ public enum NotificationTemplateCode {
         this.titleKey = titleKey;
         this.bodyKey = bodyKey;
         this.paramKeys = List.copyOf(paramKeys);
+        this.actionType = actionType;
+        this.actionLabelKey = actionLabelKey;
+        this.actionUrlParamKey = actionUrlParamKey;
         this.adminEnabled = adminEnabled;
         this.publicTestEnabled = publicTestEnabled;
     }
@@ -218,6 +270,18 @@ public enum NotificationTemplateCode {
 
     public List<String> getParamKeys() {
         return paramKeys;
+    }
+
+    public NotificationActionType getActionType() {
+        return actionType;
+    }
+
+    public String getActionLabelKey() {
+        return actionLabelKey;
+    }
+
+    public String getActionUrlParamKey() {
+        return actionUrlParamKey;
     }
 
     public boolean isAdminEnabled() {

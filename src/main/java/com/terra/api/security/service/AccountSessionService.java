@@ -45,7 +45,7 @@ public class AccountSessionService {
                               String newRefreshToken,
                               Instant newExpiresAt,
                               HttpServletRequest request) {
-        AccountSession currentSession = getActiveSession(currentRefreshToken);
+        AccountSession currentSession = getActiveSessionForUpdate(currentRefreshToken);
         if (!currentSession.getAccount().getId().equals(accountMaster.getId())) {
             throw new JwtAuthenticationException("auth.invalid_refresh_token");
         }
@@ -87,11 +87,22 @@ public class AccountSessionService {
         AccountSession session = accountSessionRepository.findByRefreshTokenHash(hashToken(refreshToken))
                 .orElseThrow(() -> new JwtAuthenticationException("auth.invalid_refresh_token"));
 
+        validateActiveSession(session);
+        return session;
+    }
+
+    private AccountSession getActiveSessionForUpdate(String refreshToken) {
+        AccountSession session = accountSessionRepository.findWithLockByRefreshTokenHash(hashToken(refreshToken))
+                .orElseThrow(() -> new JwtAuthenticationException("auth.invalid_refresh_token"));
+
+        validateActiveSession(session);
+        return session;
+    }
+
+    private void validateActiveSession(AccountSession session) {
         if (!session.isActive()) {
             throw new JwtAuthenticationException("auth.invalid_refresh_token");
         }
-
-        return session;
     }
 
     private String hashToken(String token) {

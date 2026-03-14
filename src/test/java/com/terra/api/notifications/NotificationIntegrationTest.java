@@ -256,20 +256,16 @@ class NotificationIntegrationTest {
         assertEquals("account.welcome_registered", accountNotificationRepository.findAll().get(0).getType());
     }
 
-    // Verifica que crear desde plantilla persista los datos base para una plantilla administrativa soportada.
+    // Verifica que crear desde plantilla persista los datos base para una plantilla vigente del sistema.
     @Test
     void shouldCreateNotificationFromTemplate() {
         AccountMaster account = createVerifiedUser("notify-template@l2terra.online");
 
-        notificationCommandService.createFromTemplate(account, NotificationTemplateCode.SYSTEM_MAINTENANCE_SCHEDULED, java.util.Map.of(
-                "date", "2026-03-20",
-                "time", "23:00",
-                "timezone", "ART"
-        ));
+        notificationCommandService.createFromTemplate(account, NotificationTemplateCode.SYSTEM_TEST_NOTIFICATION, java.util.Map.of());
 
         assertEquals(1, accountNotificationRepository.count());
         AccountNotification notification = accountNotificationRepository.findAll().get(0);
-        assertEquals("system.maintenance_scheduled", notification.getType());
+        assertEquals("system.test_notification", notification.getType());
     }
 
     private AccountMaster createVerifiedUser(String email) {

@@ -2,6 +2,7 @@ package com.terra.api.notifications.service;
 
 import com.terra.api.auth.entity.AccountMaster;
 import com.terra.api.notifications.domain.AccountNotification;
+import com.terra.api.notifications.domain.NotificationActionType;
 import com.terra.api.notifications.domain.NotificationStatus;
 import com.terra.api.notifications.dto.NotificationBulkMutationResponse;
 import com.terra.api.notifications.dto.NotificationMutationResponse;
@@ -103,7 +104,25 @@ public class NotificationCommandService {
         notification.setSeverity(templateCode.getSeverity());
         notification.setTitleKey(templateCode.getTitleKey());
         notification.setBodyKey(templateCode.getBodyKey());
-        notification.setParamsJson(notificationMapper.writeMap(params == null ? Map.of() : params));
+        Map<String, Object> sanitizedParams = params == null ? Map.of() : params;
+        notification.setParamsJson(notificationMapper.writeMap(sanitizedParams));
+        if (templateCode.getActionType() != null) {
+            notification.setActionType(templateCode.getActionType());
+            notification.setActionLabelKey(templateCode.getActionLabelKey());
+            notification.setActionPayloadJson(buildActionPayload(templateCode, sanitizedParams));
+        }
         return notification;
+    }
+
+    private String buildActionPayload(NotificationTemplateCode templateCode, Map<String, Object> params) {
+        if (templateCode.getActionType() == NotificationActionType.EXTERNAL_URL
+                && templateCode.getActionUrlParamKey() != null) {
+            Object url = params.get(templateCode.getActionUrlParamKey());
+            if (url instanceof String urlValue && !urlValue.isBlank()) {
+                return notificationMapper.writeMap(Map.of("url", urlValue));
+            }
+        }
+
+        return notificationMapper.writeMap(Map.of());
     }
 }

@@ -62,13 +62,17 @@ public class RealtimeWebSocketHandler extends TextWebSocketHandler {
         handshakeRateLimiter.incrementAccount(accountId);
         realtimeSessionService.touchSession(realtimeSessionId);
         realtimeEventPublisher.publishUnreadCount(accountId, Math.toIntExact(notificationQueryService.unreadCount(accountId)));
-        sendEvent(session, RealtimeEventMessage.of(
-                RealtimeEventType.SYSTEM_CONNECTED,
-                Map.of(
-                        "connectedAt", Instant.now().toString(),
-                        "realtimeSessionId", realtimeSessionId
-                )
-        ));
+        try {
+            sendEvent(session, RealtimeEventMessage.of(
+                    RealtimeEventType.SYSTEM_CONNECTED,
+                    Map.of(
+                            "connectedAt", Instant.now().toString(),
+                            "realtimeSessionId", realtimeSessionId
+                    )
+            ));
+        } catch (IllegalStateException exception) {
+            cleanup(session, "closed_during_connect");
+        }
     }
 
     @Override
@@ -156,6 +160,9 @@ public class RealtimeWebSocketHandler extends TextWebSocketHandler {
     }
 
     private void sendEvent(WebSocketSession session, RealtimeEventMessage message) throws Exception {
+        if (!session.isOpen()) {
+            throw new IllegalStateException("WebSocket session is closed");
+        }
         session.sendMessage(new TextMessage(objectMapper.writeValueAsString(message)));
     }
 
