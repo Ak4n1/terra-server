@@ -1,0 +1,17 @@
+= Terra API
+:toc: left
+:toclevels: 2
+:sectanchors:
+:source-highlighter: highlightjs
+
+Documentacion tecnica de la API de Terra en espanol.
+
+include::auth.adoc[]
+
+include::notifications.adoc[]
+
+include::realtime.adoc[]
+
+include::mail.adoc[]
+
+include::infrastructure.adoc[]

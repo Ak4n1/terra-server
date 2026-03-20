@@ -1,18 +1,19 @@
 package com.terra.api.realtime;
 
-import com.terra.api.auth.entity.AccountMaster;
-import com.terra.api.auth.entity.Role;
-import com.terra.api.auth.entity.RoleName;
-import com.terra.api.auth.repository.AccountMasterRepository;
-import com.terra.api.auth.repository.AccountSessionRepository;
-import com.terra.api.auth.repository.AccountVerificationRepository;
-import com.terra.api.auth.repository.RoleRepository;
-import com.terra.api.notifications.repository.AccountNotificationRepository;
-import com.terra.api.auth.service.VerificationTokenService;
-import com.terra.api.realtime.session.RealtimeSession;
-import com.terra.api.realtime.session.RealtimeSessionRepository;
-import com.terra.api.realtime.session.RealtimeSessionStatus;
-import com.terra.api.realtime.websocket.RealtimeHandshakeRateLimiter;
+import com.terra.api.auth.application.VerificationTokenService;
+import com.terra.api.auth.domain.model.AccountMaster;
+import com.terra.api.auth.domain.model.AccountVerificationType;
+import com.terra.api.auth.domain.model.Role;
+import com.terra.api.auth.domain.model.RoleName;
+import com.terra.api.auth.infrastructure.persistence.AccountMasterRepository;
+import com.terra.api.auth.infrastructure.persistence.AccountSessionRepository;
+import com.terra.api.auth.infrastructure.persistence.AccountVerificationRepository;
+import com.terra.api.auth.infrastructure.persistence.RoleRepository;
+import com.terra.api.notifications.infrastructure.persistence.AccountNotificationRepository;
+import com.terra.api.realtime.domain.model.RealtimeSession;
+import com.terra.api.realtime.domain.model.RealtimeSessionStatus;
+import com.terra.api.realtime.infrastructure.persistence.RealtimeSessionRepository;
+import com.terra.api.realtime.infrastructure.websocket.RealtimeHandshakeRateLimiter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -480,7 +481,7 @@ class WebSocketIntegrationTest {
     }
 
     private void resetPassword(AccountMaster accountMaster, String newPassword) {
-        String resetToken = verificationTokenService.createOrRefresh(accountMaster, com.terra.api.auth.entity.AccountVerificationType.PASSWORD_RESET, 15L);
+        String resetToken = verificationTokenService.createOrRefresh(accountMaster, AccountVerificationType.PASSWORD_RESET, 15L);
         HttpRequest request = HttpRequest.newBuilder(URI.create(authUrl("/reset-password")))
                 .header(HttpHeaders.CONTENT_TYPE, "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString("""

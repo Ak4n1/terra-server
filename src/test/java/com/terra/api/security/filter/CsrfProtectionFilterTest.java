@@ -1,9 +1,10 @@
 package com.terra.api.security.filter;
 
-import com.terra.api.common.i18n.message.MessageResolver;
-import com.terra.api.common.i18n.resolver.CurrentLanguageResolver;
-import com.terra.api.security.config.CsrfProperties;
-import com.terra.api.security.config.JwtProperties;
+import com.terra.api.common.infrastructure.i18n.MessageResolver;
+import com.terra.api.common.infrastructure.i18n.CurrentLanguageResolver;
+import com.terra.api.security.infrastructure.config.CsrfProperties;
+import com.terra.api.security.infrastructure.config.JwtProperties;
+import com.terra.api.security.infrastructure.filter.CsrfProtectionFilter;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;

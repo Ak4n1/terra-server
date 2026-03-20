@@ -1,0 +1,27 @@
+== Infrastructure
+
+Este bloque agrupa configuracion transversal y preocupaciones tecnicas compartidas.
+
+=== Seguridad
+
+- JWT de acceso y refresh en cookies.
+- Cookie y header CSRF dedicados.
+- Filtros de autenticacion, CSRF y rate limit.
+- Validaciones de seguridad para perfil productivo.
+
+=== Configuracion relevante
+
+- `CorsProperties`: origenes permitidos para HTTP.
+- `JwtProperties`: expiracion, nombres de cookie y flags de seguridad.
+- `CsrfProperties`: nombres de cookie/header CSRF.
+- `RateLimitProperties`: politicas por endpoint.
+- `SecurityNetworkProperties`: confianza en `X-Forwarded-*`.
+
+=== Async
+
+- En `test` el executor de mail es sincrono.
+- En otros perfiles se usa un `ThreadPoolTaskExecutor`.
+
+=== Salida de documentacion
+
+Cuando se ejecuta el pipeline de documentacion, los HTML se generan en `target/generated-docs`.

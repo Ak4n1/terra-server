@@ -1,6 +1,7 @@
 package com.terra.api.common.i18n.message;
 
-import com.terra.api.common.i18n.resolver.CurrentLanguageResolver;
+import com.terra.api.common.infrastructure.i18n.CurrentLanguageResolver;
+import com.terra.api.common.infrastructure.i18n.MessageResolver;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;

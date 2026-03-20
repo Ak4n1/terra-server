@@ -1,0 +1,51 @@
+== Notifications
+
+Este modulo expone el inbox del usuario, operaciones de lectura y herramientas administrativas para plantillas y auditoria.
+
+=== GET `/api/notifications`
+
+Lista notificaciones del usuario autenticado con paginacion y filtro opcional de no leidas.
+
+operation::notifications/list[snippets='http-request,request-cookies,query-parameters,http-response']
+
+=== PATCH `/api/notifications/{notificationId}/read`
+
+Marca una notificacion individual como leida.
+
+operation::notifications/mark-read[snippets='http-request,request-cookies,request-headers,path-parameters,http-response']
+
+=== PATCH `/api/notifications/read-all`
+
+Marca como leidas todas las notificaciones pendientes del usuario autenticado.
+
+operation::notifications/mark-all-read[snippets='http-request,request-cookies,request-headers,http-response']
+
+=== GET `/api/admin/notifications/templates`
+
+Devuelve el catalogo administrativo de plantillas habilitadas para operadores.
+
+operation::notifications/admin-templates[snippets='http-request,request-cookies,http-response']
+
+=== GET `/api/admin/notifications/audit`
+
+Lista auditoria paginada con filtros por plantilla, estado y rango de fechas.
+
+operation::notifications/admin-audit[snippets='http-request,request-cookies,query-parameters,http-response']
+
+=== POST `/api/admin/notifications`
+
+Dispara una notificacion administrativa individual.
+
+operation::notifications/admin-dispatch[snippets='curl-request,http-request,request-cookies,request-headers,request-fields,http-response']
+
+=== POST `/api/admin/notifications/broadcast`
+
+Emite una notificacion administrativa a un segmento de audiencia.
+
+operation::notifications/admin-broadcast[snippets='curl-request,http-request,request-cookies,request-headers,request-fields,http-response']
+
+=== POST `/api/test/notifications`
+
+Endpoint auxiliar disponible en `dev` y `test` para disparar notificaciones de prueba.
+
+operation::notifications/test-dispatch[snippets='curl-request,http-request,request-fields,http-response']

@@ -1,0 +1,30 @@
+== Realtime
+
+El modulo realtime expone un canal WebSocket en `/api/ws`.
+
+=== Handshake
+
+- Requiere `Origin` permitido por configuracion CORS/WebSocket.
+- Requiere cookies de autenticacion validas.
+- Si la sesion refresh esta revocada o expirada, el handshake es rechazado.
+- El servidor persiste una `RealtimeSession` por conexion aceptada.
+
+=== Eventos salientes
+
+- `system.connected`: confirma la apertura del socket.
+- `system.ping`: heartbeat del servidor.
+- `system.refresh_required`: indica al cliente que debe refrescar credenciales.
+- `account.session.revoked`: cierra sesiones invalidadas por logout, logout-all o reset-password.
+- `notification.created`: emite una notificacion nueva.
+- `notification.unread_count`: sincroniza el contador de no leidas.
+
+=== Eventos entrantes permitidos
+
+- `system.pong`
+- `notification.ack`
+
+=== Reglas operativas
+
+- Hay limite por IP para handshakes.
+- Hay limite de conexiones simultaneas por cuenta.
+- El payload tiene tamano maximo y el servidor cierra conexiones invalidas.

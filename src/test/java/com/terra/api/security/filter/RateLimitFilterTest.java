@@ -1,11 +1,12 @@
 package com.terra.api.security.filter;
 
-import com.terra.api.common.i18n.message.MessageResolver;
-import com.terra.api.common.i18n.resolver.CurrentLanguageResolver;
-import com.terra.api.security.config.RateLimitProperties;
-import com.terra.api.security.config.SecurityNetworkProperties;
-import com.terra.api.security.service.ClientIpResolver;
-import com.terra.api.security.service.RateLimitService;
+import com.terra.api.common.infrastructure.i18n.MessageResolver;
+import com.terra.api.common.infrastructure.i18n.CurrentLanguageResolver;
+import com.terra.api.security.infrastructure.config.RateLimitProperties;
+import com.terra.api.security.infrastructure.config.SecurityNetworkProperties;
+import com.terra.api.security.application.ClientIpResolver;
+import com.terra.api.security.application.RateLimitService;
+import com.terra.api.security.infrastructure.filter.RateLimitFilter;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;

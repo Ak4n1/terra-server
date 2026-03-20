@@ -1,13 +1,13 @@
 package com.terra.api.notifications;
 
-import com.terra.api.auth.entity.AccountMaster;
-import com.terra.api.auth.entity.Role;
-import com.terra.api.auth.entity.RoleName;
-import com.terra.api.auth.repository.AccountMasterRepository;
-import com.terra.api.auth.repository.AccountSessionRepository;
-import com.terra.api.auth.repository.AccountVerificationRepository;
-import com.terra.api.auth.repository.RoleRepository;
-import com.terra.api.notifications.repository.AccountNotificationRepository;
+import com.terra.api.auth.domain.model.AccountMaster;
+import com.terra.api.auth.domain.model.Role;
+import com.terra.api.auth.domain.model.RoleName;
+import com.terra.api.auth.infrastructure.persistence.AccountMasterRepository;
+import com.terra.api.auth.infrastructure.persistence.AccountSessionRepository;
+import com.terra.api.auth.infrastructure.persistence.AccountVerificationRepository;
+import com.terra.api.auth.infrastructure.persistence.RoleRepository;
+import com.terra.api.notifications.infrastructure.persistence.AccountNotificationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +25,7 @@ import jakarta.servlet.http.Cookie;
 import java.util.List;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -237,6 +238,84 @@ class NotificationAdminIntegrationTest {
                 .andExpect(jsonPath("$.code").value("notifications.admin_template_not_allowed"));
     }
 
+    @Test
+    void shouldReplayAdminDispatchWhenUsingSameIdempotencyKey() throws Exception {
+        createVerifiedUser("notify-admin-idem@l2terra.online", RoleName.ADMIN);
+        createVerifiedUser("notify-target-idem@l2terra.online", RoleName.USER);
+        SessionCookies cookies = login("notify-admin-idem@l2terra.online");
+
+        mockMvc.perform(post("/api/admin/notifications")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", "dispatch-idem-key-1")
+                        .cookie(cookies.accessCookie(), cookies.refreshCookie(), cookies.csrfCookie())
+                        .header("X-CSRF-TOKEN", cookies.csrfToken())
+                        .content("""
+                                {
+                                  "email": "notify-target-idem@l2terra.online",
+                                  "template": "system.admin_test_notification",
+                                  "params": {}
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("notifications.admin_dispatch_success"));
+
+        mockMvc.perform(post("/api/admin/notifications")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", "dispatch-idem-key-1")
+                        .cookie(cookies.accessCookie(), cookies.refreshCookie(), cookies.csrfCookie())
+                        .header("X-CSRF-TOKEN", cookies.csrfToken())
+                        .content("""
+                                {
+                                  "email": "notify-target-idem@l2terra.online",
+                                  "template": "system.admin_test_notification",
+                                  "params": {}
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("notifications.admin_dispatch_success"));
+
+        assertEquals(1L, accountNotificationRepository.count());
+    }
+
+    @Test
+    void shouldRejectDifferentPayloadForSameIdempotencyKey() throws Exception {
+        createVerifiedUser("notify-admin-idem-mismatch@l2terra.online", RoleName.ADMIN);
+        createVerifiedUser("notify-target-idem-mismatch@l2terra.online", RoleName.USER);
+        SessionCookies cookies = login("notify-admin-idem-mismatch@l2terra.online");
+
+        mockMvc.perform(post("/api/admin/notifications")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", "dispatch-idem-key-2")
+                        .cookie(cookies.accessCookie(), cookies.refreshCookie(), cookies.csrfCookie())
+                        .header("X-CSRF-TOKEN", cookies.csrfToken())
+                        .content("""
+                                {
+                                  "email": "notify-target-idem-mismatch@l2terra.online",
+                                  "template": "system.admin_test_notification",
+                                  "params": {}
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/admin/notifications")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", "dispatch-idem-key-2")
+                        .cookie(cookies.accessCookie(), cookies.refreshCookie(), cookies.csrfCookie())
+                        .header("X-CSRF-TOKEN", cookies.csrfToken())
+                        .content("""
+                                {
+                                  "email": "notify-target-idem-mismatch@l2terra.online",
+                                  "template": "account.contact_support",
+                                  "params": {
+                                    "channelLabel": "Discord",
+                                    "url": "https://discord.gg/terra-support"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("common.idempotency_key_payload_mismatch"));
+    }
+
     private AccountMaster createVerifiedUser(String email, RoleName roleName) {
         Role role = roleRepository.findByName(roleName)
                 .orElseThrow(() -> new IllegalStateException(roleName + " role not found"));
@@ -253,6 +332,10 @@ class NotificationAdminIntegrationTest {
     private SessionCookies login(String email) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .with(request -> {
+                            request.setRemoteAddr(ipFor("login-" + email + "-" + System.nanoTime()));
+                            return request;
+                        })
                         .content("""
                                 {
                                   "email": "%s",
@@ -263,6 +346,14 @@ class NotificationAdminIntegrationTest {
                 .andReturn();
 
         return SessionCookies.fromHeaders(result.getResponse().getHeaders(HttpHeaders.SET_COOKIE));
+    }
+
+    private String ipFor(String seed) {
+        int hash = Math.abs(seed.hashCode());
+        int second = (hash % 200) + 1;
+        int third = ((hash / 200) % 200) + 1;
+        int fourth = ((hash / 40000) % 200) + 1;
+        return "10.%d.%d.%d".formatted(second, third, fourth);
     }
 
     private record SessionCookies(Cookie accessCookie, Cookie refreshCookie, Cookie csrfCookie, String csrfToken) {

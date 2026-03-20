@@ -1,0 +1,24 @@
+== Mail
+
+El modulo mail es infraestructura de apoyo para flujos de autenticacion y comunicaciones del sistema.
+
+=== Responsabilidades
+
+- Renderizar contenido de emails transaccionales.
+- Enviar mensajes HTML a traves de `MailSenderService`.
+- Aplicar cooldowns para evitar abuso en verificaciones y recuperacion de contrasena.
+
+=== Propiedades `app.mail`
+
+- `app.mail.from`: email remitente.
+- `app.mail.from-name`: nombre visible del remitente.
+- `app.mail.frontend-verify-url`: URL base de verificacion de email.
+- `app.mail.frontend-reset-password-url`: URL base de recuperacion de contrasena.
+- `app.mail.verification-email-cooldown-seconds`: enfriamiento del reenvio de verificacion.
+- `app.mail.password-reset-cooldown-seconds`: enfriamiento del flujo de reset.
+
+=== Integraciones actuales
+
+- Registro de cuenta.
+- Reenvio de verificacion.
+- Recuperacion de contrasena.

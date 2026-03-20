@@ -1,11 +1,11 @@
 package com.terra.api.auth;
 
-import com.terra.api.auth.entity.AccountSession;
-import com.terra.api.notifications.repository.AccountNotificationRepository;
-import com.terra.api.auth.repository.AccountMasterRepository;
-import com.terra.api.auth.repository.AccountSessionRepository;
-import com.terra.api.auth.repository.AccountVerificationRepository;
-import com.terra.api.mail.service.MailSenderService;
+import com.terra.api.auth.domain.model.AccountSession;
+import com.terra.api.auth.infrastructure.persistence.AccountMasterRepository;
+import com.terra.api.auth.infrastructure.persistence.AccountSessionRepository;
+import com.terra.api.auth.infrastructure.persistence.AccountVerificationRepository;
+import com.terra.api.mail.domain.MailSenderService;
+import com.terra.api.notifications.infrastructure.persistence.AccountNotificationRepository;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -122,6 +122,18 @@ class AuthFlowIntegrationTest {
     }
 
     @Test
+    void authConfigShouldIssueCsrfCookieForClientRecovery() throws Exception {
+        MvcResult configResult = mockMvc.perform(get("/api/auth/config"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("auth.client_config"))
+                .andReturn();
+
+        ParsedCookie csrfCookie = getSetCookie(configResult, "XSRF-TOKEN");
+        assertNotNull(csrfCookie.value());
+        assertFalse(csrfCookie.value().isBlank());
+    }
+
+    @Test
     void meShouldReturnCurrentUserWhenAccessCookieIsPresent() throws Exception {
         registerAndVerify("player3@l2terra.online");
         MvcResult loginResult = login("player3@l2terra.online");
@@ -192,6 +204,41 @@ class AuthFlowIntegrationTest {
         List<AccountSession> sessions = accountSessionRepository.findAll();
         assertEquals(2, sessions.size());
         assertEquals(1, sessions.stream().filter(session -> session.getRevokedAt() != null).count());
+    }
+
+    @Test
+    void refreshShouldReplayWhenIdempotencyKeyIsReused() throws Exception {
+        registerAndVerify("player4-idem@l2terra.online");
+        MvcResult loginResult = login("player4-idem@l2terra.online");
+
+        Cookie originalRefreshCookie = new Cookie("terra_refresh_token", getSetCookie(loginResult, "terra_refresh_token").value());
+        Cookie originalCsrfCookie = new Cookie("XSRF-TOKEN", getSetCookie(loginResult, "XSRF-TOKEN").value());
+
+        MvcResult firstRefreshResult = mockMvc.perform(post("/api/auth/refresh")
+                        .header("Idempotency-Key", "refresh-idem-key-1")
+                        .cookie(originalRefreshCookie, originalCsrfCookie)
+                        .header("X-CSRF-TOKEN", originalCsrfCookie.getValue()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("auth.token_refreshed"))
+                .andReturn();
+
+        ParsedCookie firstRotatedRefreshCookie = getSetCookie(firstRefreshResult, "terra_refresh_token");
+        ParsedCookie firstRotatedAccessCookie = getSetCookie(firstRefreshResult, "terra_access_token");
+
+        MvcResult secondRefreshResult = mockMvc.perform(post("/api/auth/refresh")
+                        .header("Idempotency-Key", "refresh-idem-key-1")
+                        .cookie(originalRefreshCookie, originalCsrfCookie)
+                        .header("X-CSRF-TOKEN", originalCsrfCookie.getValue()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("auth.token_refreshed"))
+                .andReturn();
+
+        ParsedCookie secondRotatedRefreshCookie = getSetCookie(secondRefreshResult, "terra_refresh_token");
+        ParsedCookie secondRotatedAccessCookie = getSetCookie(secondRefreshResult, "terra_access_token");
+
+        assertEquals(firstRotatedRefreshCookie.value(), secondRotatedRefreshCookie.value());
+        assertEquals(firstRotatedAccessCookie.value(), secondRotatedAccessCookie.value());
+        assertEquals(2L, accountSessionRepository.count());
     }
 
     @Test

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "number": 1,
+      "label": "spring",
+      "command": "ak capture --label spring -- .\\mvnw.cmd spring-boot:run"
+    }
+  ]
+}
