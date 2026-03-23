@@ -9,7 +9,9 @@ public class MailProperties {
     private String fromName;
     private String frontendVerifyUrl;
     private String frontendResetPasswordUrl;
+    private String frontendTwoFactorRecoveryUrl;
     private String frontendGameAccountsUrl;
+    private String frontendSecurityUrl;
     private long verificationEmailCooldownSeconds = 60L;
     private long passwordResetCooldownSeconds = 60L;
 
@@ -45,12 +47,28 @@ public class MailProperties {
         this.frontendResetPasswordUrl = frontendResetPasswordUrl;
     }
 
+    public String getFrontendTwoFactorRecoveryUrl() {
+        return frontendTwoFactorRecoveryUrl;
+    }
+
+    public void setFrontendTwoFactorRecoveryUrl(String frontendTwoFactorRecoveryUrl) {
+        this.frontendTwoFactorRecoveryUrl = frontendTwoFactorRecoveryUrl;
+    }
+
     public String getFrontendGameAccountsUrl() {
         return frontendGameAccountsUrl;
     }
 
     public void setFrontendGameAccountsUrl(String frontendGameAccountsUrl) {
         this.frontendGameAccountsUrl = frontendGameAccountsUrl;
+    }
+
+    public String getFrontendSecurityUrl() {
+        return frontendSecurityUrl;
+    }
+
+    public void setFrontendSecurityUrl(String frontendSecurityUrl) {
+        this.frontendSecurityUrl = frontendSecurityUrl;
     }
 
     public long getVerificationEmailCooldownSeconds() {

@@ -31,8 +31,27 @@ public class AccountMaster {
     @Column(name = "email", nullable = false, unique = true, length = 255)
     private String email;
 
+    @Column(name = "username", length = 24)
+    private String username;
+
+    @Column(name = "username_updated_at")
+    private Instant usernameUpdatedAt;
+
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "avatar_type", length = 16)
+    private AccountAvatarType avatarType = AccountAvatarType.DEFAULT;
+
+    @Column(name = "avatar_preset_path", length = 255)
+    private String avatarPresetPath;
+
+    @Column(name = "avatar_custom_file_name", length = 255)
+    private String avatarCustomFileName;
+
+    @Column(name = "avatar_updated_at")
+    private Instant avatarUpdatedAt;
 
     @Column(name = "enabled", nullable = false)
     private boolean enabled = true;
@@ -42,6 +61,21 @@ public class AccountMaster {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
+
+    @Column(name = "last_login_at")
+    private Instant lastLoginAt;
+
+    @Column(name = "two_factor_enabled", nullable = false)
+    private boolean twoFactorEnabled;
+
+    @Column(name = "two_factor_secret", length = 255)
+    private String twoFactorSecret;
+
+    @Column(name = "two_factor_enabled_at")
+    private Instant twoFactorEnabledAt;
+
+    @Column(name = "two_factor_recovery_requested_at")
+    private Instant twoFactorRecoveryRequestedAt;
 
     @Column(name = "token_version", nullable = false)
     private long tokenVersion;
@@ -65,6 +99,9 @@ public class AccountMaster {
         if (preferredLanguage == null) {
             preferredLanguage = SupportedLanguage.defaultLanguage();
         }
+        if (avatarType == null) {
+            avatarType = AccountAvatarType.DEFAULT;
+        }
     }
 
     public Long getId() {
@@ -77,6 +114,22 @@ public class AccountMaster {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public Instant getUsernameUpdatedAt() {
+        return usernameUpdatedAt;
+    }
+
+    public void setUsernameUpdatedAt(Instant usernameUpdatedAt) {
+        this.usernameUpdatedAt = usernameUpdatedAt;
     }
 
     public String getPasswordHash() {
@@ -107,6 +160,46 @@ public class AccountMaster {
         return createdAt;
     }
 
+    public Instant getLastLoginAt() {
+        return lastLoginAt;
+    }
+
+    public void setLastLoginAt(Instant lastLoginAt) {
+        this.lastLoginAt = lastLoginAt;
+    }
+
+    public boolean isTwoFactorEnabled() {
+        return twoFactorEnabled;
+    }
+
+    public void setTwoFactorEnabled(boolean twoFactorEnabled) {
+        this.twoFactorEnabled = twoFactorEnabled;
+    }
+
+    public String getTwoFactorSecret() {
+        return twoFactorSecret;
+    }
+
+    public void setTwoFactorSecret(String twoFactorSecret) {
+        this.twoFactorSecret = twoFactorSecret;
+    }
+
+    public Instant getTwoFactorEnabledAt() {
+        return twoFactorEnabledAt;
+    }
+
+    public void setTwoFactorEnabledAt(Instant twoFactorEnabledAt) {
+        this.twoFactorEnabledAt = twoFactorEnabledAt;
+    }
+
+    public Instant getTwoFactorRecoveryRequestedAt() {
+        return twoFactorRecoveryRequestedAt;
+    }
+
+    public void setTwoFactorRecoveryRequestedAt(Instant twoFactorRecoveryRequestedAt) {
+        this.twoFactorRecoveryRequestedAt = twoFactorRecoveryRequestedAt;
+    }
+
     public Set<Role> getRoles() {
         return roles;
     }
@@ -133,5 +226,37 @@ public class AccountMaster {
 
     public void setPreferredLanguage(SupportedLanguage preferredLanguage) {
         this.preferredLanguage = preferredLanguage;
+    }
+
+    public AccountAvatarType getAvatarType() {
+        return avatarType;
+    }
+
+    public void setAvatarType(AccountAvatarType avatarType) {
+        this.avatarType = avatarType;
+    }
+
+    public String getAvatarPresetPath() {
+        return avatarPresetPath;
+    }
+
+    public void setAvatarPresetPath(String avatarPresetPath) {
+        this.avatarPresetPath = avatarPresetPath;
+    }
+
+    public String getAvatarCustomFileName() {
+        return avatarCustomFileName;
+    }
+
+    public void setAvatarCustomFileName(String avatarCustomFileName) {
+        this.avatarCustomFileName = avatarCustomFileName;
+    }
+
+    public Instant getAvatarUpdatedAt() {
+        return avatarUpdatedAt;
+    }
+
+    public void setAvatarUpdatedAt(Instant avatarUpdatedAt) {
+        this.avatarUpdatedAt = avatarUpdatedAt;
     }
 }

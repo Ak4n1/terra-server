@@ -90,12 +90,39 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 || "/api/auth/reset-password".equals(path)) {
             return rateLimitProperties.getAuthCritical();
         }
+        if ("/api/auth/2fa/recovery/request".equals(path)
+                || "/api/auth/2fa/recovery/confirm".equals(path)) {
+            return rateLimitProperties.getAuthCritical();
+        }
         if ("/api/auth/me".equals(path)) {
             return rateLimitProperties.getAuthSessionRead();
         }
+        if ("/api/account/settings/profile".equals(path)
+                || "/api/account/settings/profile/summary".equals(path)) {
+            return rateLimitProperties.getAuthSessionRead();
+        }
+        if ("/api/account/settings/avatar".equals(path)
+                || "/api/account/settings/avatar/custom/current".equals(path)) {
+            return rateLimitProperties.getAuthSessionRead();
+        }
+        if ("/api/account/settings/avatar/preset".equals(path)
+                || "/api/account/settings/avatar/default".equals(path)
+                || "/api/account/settings/avatar/upload".equals(path)) {
+            return rateLimitProperties.getAuthSession();
+         }
+        if ("/api/account/settings/security/status".equals(path)) {
+            return rateLimitProperties.getAuthSessionRead();
+        }
+        if ("/api/account/settings/security/2fa/recovery/request".equals(path)
+                || "/api/account/settings/security/2fa/recovery/confirm".equals(path)) {
+            return rateLimitProperties.getAuthSession();
+        }
         if ("/api/game-accounts/create-code".equals(path)
                 || "/api/game-accounts/verify-code".equals(path)
-                || "/api/game-accounts".equals(path)) {
+                || "/api/game-accounts".equals(path)
+                || "/api/game-accounts/change-password/code".equals(path)
+                || "/api/game-accounts/change-password/verify".equals(path)
+                || "/api/game-accounts/change-password".equals(path)) {
             return rateLimitProperties.getGameAccountFlow();
         }
         if ("/api/auth/refresh".equals(path)) {
@@ -114,12 +141,41 @@ public class RateLimitFilter extends OncePerRequestFilter {
         if ("/api/auth/login".equals(request.getRequestURI())
                 || "/api/auth/register".equals(request.getRequestURI())
                 || "/api/auth/resend-verification".equals(request.getRequestURI())
-                || "/api/auth/forgot-password".equals(request.getRequestURI())) {
+                || "/api/auth/forgot-password".equals(request.getRequestURI())
+                || "/api/auth/2fa/recovery/request".equals(request.getRequestURI())) {
             return ipAddress + ":" + request.getRequestURI() + ":" + extractEmailIdentity(request);
         }
         if ("/api/game-accounts/create-code".equals(request.getRequestURI())
                 || "/api/game-accounts/verify-code".equals(request.getRequestURI())
-                || "/api/game-accounts".equals(request.getRequestURI())) {
+                || "/api/game-accounts".equals(request.getRequestURI())
+                || "/api/game-accounts/change-password/code".equals(request.getRequestURI())
+                || "/api/game-accounts/change-password/verify".equals(request.getRequestURI())
+                || "/api/game-accounts/change-password".equals(request.getRequestURI())) {
+            String accountIdentity = request.getUserPrincipal() == null
+                    ? "anonymous"
+                    : request.getUserPrincipal().getName();
+            return ipAddress + ":" + request.getRequestURI() + ":" + accountIdentity;
+        }
+        if ("/api/account/settings/profile".equals(request.getRequestURI())
+                || "/api/account/settings/profile/summary".equals(request.getRequestURI())) {
+            String accountIdentity = request.getUserPrincipal() == null
+                    ? "anonymous"
+                    : request.getUserPrincipal().getName();
+            return ipAddress + ":" + request.getRequestURI() + ":" + accountIdentity;
+        }
+        if ("/api/account/settings/avatar".equals(request.getRequestURI())
+                || "/api/account/settings/avatar/custom/current".equals(request.getRequestURI())
+                || "/api/account/settings/avatar/preset".equals(request.getRequestURI())
+                || "/api/account/settings/avatar/default".equals(request.getRequestURI())
+                || "/api/account/settings/avatar/upload".equals(request.getRequestURI())) {
+            String accountIdentity = request.getUserPrincipal() == null
+                    ? "anonymous"
+                    : request.getUserPrincipal().getName();
+            return ipAddress + ":" + request.getRequestURI() + ":" + accountIdentity;
+        }
+        if ("/api/account/settings/security/status".equals(request.getRequestURI())
+                || "/api/account/settings/security/2fa/recovery/request".equals(request.getRequestURI())
+                || "/api/account/settings/security/2fa/recovery/confirm".equals(request.getRequestURI())) {
             String accountIdentity = request.getUserPrincipal() == null
                     ? "anonymous"
                     : request.getUserPrincipal().getName();
@@ -134,7 +190,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
         if (!"/api/auth/login".equals(path)
                 && !"/api/auth/register".equals(path)
                 && !"/api/auth/resend-verification".equals(path)
-                && !"/api/auth/forgot-password".equals(path)) {
+                && !"/api/auth/forgot-password".equals(path)
+                && !"/api/auth/2fa/recovery/request".equals(path)) {
             return false;
         }
 

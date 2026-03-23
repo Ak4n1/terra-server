@@ -51,7 +51,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleTooManyRequests(TooManyRequestsException ex) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("code", ex.getCode());
-        body.put("message", messageResolver.get(ex.getCode()));
+        body.put("message", messageResolver.get(ex.getCode(), ex.getMessageArgs()));
         body.put("retryAfterSeconds", ex.getRetryAfterSeconds());
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                 .header(HttpHeaders.RETRY_AFTER, String.valueOf(ex.getRetryAfterSeconds()))

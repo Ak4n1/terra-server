@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.util.List;
 
 @Service
 public class AccountSessionService {
@@ -89,6 +90,37 @@ public class AccountSessionService {
 
         validateActiveSession(session);
         return session;
+    }
+
+    @Transactional(readOnly = true)
+    public List<AccountSession> listActiveSessions(AccountMaster accountMaster) {
+        return accountSessionRepository.findByAccount_IdAndRevokedAtIsNullAndExpiresAtAfterOrderByCreatedAtDesc(accountMaster.getId(), Instant.now());
+    }
+
+    @Transactional
+    public void revokeSessionById(AccountMaster accountMaster, Long sessionId) {
+        AccountSession session = accountSessionRepository.findByIdAndAccount_Id(sessionId, accountMaster.getId())
+                .orElseThrow(() -> new JwtAuthenticationException("auth.invalid_token"));
+
+        if (session.getRevokedAt() == null) {
+            session.setRevokedAt(Instant.now());
+        }
+    }
+
+    @Transactional
+    public void revokeAllSessionsExcept(AccountMaster accountMaster, Long keepSessionId) {
+        Instant revokedAt = Instant.now();
+        accountSessionRepository.findByAccount_Id(accountMaster.getId())
+                .forEach(session -> {
+                    if (session.getRevokedAt() == null
+                            && (keepSessionId == null || !keepSessionId.equals(session.getId()))) {
+                        session.setRevokedAt(revokedAt);
+                    }
+                });
+    }
+
+    public String hashTokenForLookup(String token) {
+        return hashToken(token);
     }
 
     private AccountSession getActiveSessionForUpdate(String refreshToken) {

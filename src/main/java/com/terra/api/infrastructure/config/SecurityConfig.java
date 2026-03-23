@@ -102,12 +102,15 @@ public class SecurityConfig {
                 .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
+                                "/api/auth/config",
                                 "/api/auth/register",
                                 "/api/auth/login",
                                 "/api/auth/verify-email",
                                 "/api/auth/resend-verification",
                                 "/api/auth/forgot-password",
                                 "/api/auth/reset-password",
+                                "/api/auth/2fa/recovery/request",
+                                "/api/auth/2fa/recovery/confirm",
                                 "/api/auth/refresh",
                                 "/api/auth/logout"
                         ).permitAll()
@@ -115,9 +118,12 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/notifications/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                         .requestMatchers("/api/auth/logout-all").hasAnyRole("USER", "ADMIN", "SUPER_ADMIN")
                         .requestMatchers("/api/auth/me", "/api/auth/preferred-language").hasAnyRole("USER", "ADMIN", "SUPER_ADMIN")
+                        .requestMatchers("/api/account/settings/profile", "/api/account/settings/profile/summary").hasAnyRole("USER", "ADMIN", "SUPER_ADMIN")
+                        .requestMatchers("/api/account/settings/avatar/**").hasAnyRole("USER", "ADMIN", "SUPER_ADMIN")
+                        .requestMatchers("/api/account/settings/security/**").hasAnyRole("USER", "ADMIN", "SUPER_ADMIN")
                         .requestMatchers("/api/game-accounts/**").hasAnyRole("USER", "ADMIN", "SUPER_ADMIN")
                         .requestMatchers("/api/notifications/**").hasAnyRole("USER", "ADMIN", "SUPER_ADMIN")
-                        .anyRequest().permitAll())
+                        .anyRequest().authenticated())
                 .headers(headers -> {
                     headers.cacheControl(Customizer.withDefaults());
                     headers.contentTypeOptions(Customizer.withDefaults());

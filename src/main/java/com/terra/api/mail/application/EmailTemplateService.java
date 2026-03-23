@@ -12,7 +12,9 @@ public class EmailTemplateService {
 
     private static final String EMAIL_VERIFICATION_MODULE = "mail/email-verification";
     private static final String PASSWORD_RESET_MODULE = "mail/password-reset";
+    private static final String TWO_FACTOR_RECOVERY_MODULE = "mail/two-factor-recovery";
     private static final String GAME_ACCOUNT_CREATE_MODULE = "mail/game-account-create";
+    private static final String GAME_ACCOUNT_CHANGE_PASSWORD_MODULE = "mail/game-account-change-password";
 
     private final MessageResolver messageResolver;
 
@@ -129,6 +131,8 @@ public class EmailTemplateService {
                 messageResolver.getFromModule(GAME_ACCOUNT_CREATE_MODULE, "mail.game_account_create.greeting", language),
                 email,
                 messageResolver.getFromModule(GAME_ACCOUNT_CREATE_MODULE, "mail.game_account_create.body", language),
+                null,
+                null,
                 code,
                 messageResolver.getFromModule(GAME_ACCOUNT_CREATE_MODULE, "mail.game_account_create.cta", language),
                 dashboardUrl,
@@ -142,11 +146,99 @@ public class EmailTemplateService {
         return new EmailMessage(subject, htmlBody);
     }
 
+    public EmailMessage buildTwoFactorRecoveryMessage(String email,
+                                                      String recoveryUrl,
+                                                      SupportedLanguage language,
+                                                      long expirationMinutes) {
+        String title = messageResolver.getFromModule(
+                TWO_FACTOR_RECOVERY_MODULE,
+                "mail.two_factor_recovery.subject",
+                language
+        );
+        String subject = buildSubject(
+                TWO_FACTOR_RECOVERY_MODULE,
+                "mail.two_factor_recovery.subject_label",
+                language
+        );
+        String htmlBody = buildMailLayout(
+                messageResolver.getFromModule(
+                        TWO_FACTOR_RECOVERY_MODULE,
+                        "mail.two_factor_recovery.eyebrow",
+                        language
+                ),
+                title,
+                messageResolver.getFromModule(TWO_FACTOR_RECOVERY_MODULE, "mail.two_factor_recovery.greeting", language),
+                email,
+                messageResolver.getFromModule(TWO_FACTOR_RECOVERY_MODULE, "mail.two_factor_recovery.body", language),
+                recoveryUrl,
+                messageResolver.getFromModule(TWO_FACTOR_RECOVERY_MODULE, "mail.two_factor_recovery.cta", language),
+                List.of(
+                        messageResolver.getFromModule(
+                                TWO_FACTOR_RECOVERY_MODULE,
+                                "mail.two_factor_recovery.expiry",
+                                language,
+                                expirationMinutes
+                        ),
+                        messageResolver.getFromModule(TWO_FACTOR_RECOVERY_MODULE, "mail.two_factor_recovery.ignore", language)
+                ),
+                messageResolver.getFromModule(TWO_FACTOR_RECOVERY_MODULE, "mail.common.link_fallback", language),
+                recoveryUrl,
+                messageResolver.getFromModule(TWO_FACTOR_RECOVERY_MODULE, "mail.common.signature_closing", language),
+                messageResolver.getFromModule(TWO_FACTOR_RECOVERY_MODULE, "mail.common.signature_name", language),
+                messageResolver.getFromModule(TWO_FACTOR_RECOVERY_MODULE, "mail.two_factor_recovery.footer", language)
+        );
+        return new EmailMessage(subject, htmlBody);
+    }
+
+    public EmailMessage buildGameAccountPasswordChangeCodeMessage(String email,
+                                                                  String accountName,
+                                                                  String code,
+                                                                  String dashboardUrl,
+                                                                  SupportedLanguage language,
+                                                                  long expirationMinutes) {
+        String title = messageResolver.getFromModule(
+                GAME_ACCOUNT_CHANGE_PASSWORD_MODULE,
+                "mail.game_account_change_password.subject",
+                language
+        );
+        String subject = buildSubject(
+                GAME_ACCOUNT_CHANGE_PASSWORD_MODULE,
+                "mail.game_account_change_password.subject_label",
+                language
+        );
+        String selectedAccountLabel = messageResolver.getFromModule(
+                GAME_ACCOUNT_CHANGE_PASSWORD_MODULE,
+                "mail.game_account_change_password.selected_account_label",
+                language
+        );
+        String htmlBody = buildGameAccountCreateLayout(
+                messageResolver.getFromModule(GAME_ACCOUNT_CHANGE_PASSWORD_MODULE, "mail.game_account_change_password.eyebrow", language),
+                title,
+                messageResolver.getFromModule(GAME_ACCOUNT_CHANGE_PASSWORD_MODULE, "mail.game_account_change_password.greeting", language),
+                email,
+                messageResolver.getFromModule(GAME_ACCOUNT_CHANGE_PASSWORD_MODULE, "mail.game_account_change_password.body", language, accountName),
+                selectedAccountLabel,
+                accountName,
+                code,
+                messageResolver.getFromModule(GAME_ACCOUNT_CHANGE_PASSWORD_MODULE, "mail.game_account_change_password.cta", language),
+                dashboardUrl,
+                messageResolver.getFromModule(GAME_ACCOUNT_CHANGE_PASSWORD_MODULE, "mail.game_account_change_password.expiry", language, expirationMinutes),
+                messageResolver.getFromModule(GAME_ACCOUNT_CHANGE_PASSWORD_MODULE, "mail.game_account_change_password.ignore", language),
+                messageResolver.getFromModule(GAME_ACCOUNT_CHANGE_PASSWORD_MODULE, "mail.common.link_fallback", language),
+                messageResolver.getFromModule(GAME_ACCOUNT_CHANGE_PASSWORD_MODULE, "mail.common.signature_closing", language),
+                messageResolver.getFromModule(GAME_ACCOUNT_CHANGE_PASSWORD_MODULE, "mail.common.signature_name", language),
+                messageResolver.getFromModule(GAME_ACCOUNT_CHANGE_PASSWORD_MODULE, "mail.game_account_change_password.footer", language)
+        );
+        return new EmailMessage(subject, htmlBody);
+    }
+
     private String buildGameAccountCreateLayout(String eyebrow,
                                                 String title,
                                                 String greeting,
                                                 String email,
                                                 String body,
+                                                String selectedAccountLabel,
+                                                String selectedAccountValue,
                                                 String code,
                                                 String ctaLabel,
                                                 String dashboardUrl,
@@ -184,6 +276,13 @@ public class EmailTemplateService {
                 .append("<p style=\"margin: 18px 0 0; color: #b8b8b8; font-family: Arial, Helvetica, sans-serif; font-size: 15px; line-height: 1.7;\">")
                 .append(escapeHtml(body))
                 .append("</p></td></tr>")
+                .append(selectedAccountLabel == null || selectedAccountLabel.isBlank() || selectedAccountValue == null || selectedAccountValue.isBlank()
+                        ? ""
+                        : "<tr><td style=\"padding: 0 32px 12px;\"><p style=\"margin: 0; color: #d7d7d7; font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.6;\">"
+                                + escapeHtml(selectedAccountLabel)
+                                + " <strong style=\"color: #e08821; font-weight: 700;\">"
+                                + escapeHtml(selectedAccountValue)
+                                + "</strong></p></td></tr>")
                 .append("<tr><td align=\"center\" style=\"padding: 6px 32px 20px;\">")
                 .append("<div style=\"display:inline-block; border: 1px solid #b56d19; background-color: #0d0d0d; color:#e08821; font-family: Arial, Helvetica, sans-serif; font-size: 26px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; padding: 14px 24px;\">")
                 .append(escapeHtml(code))

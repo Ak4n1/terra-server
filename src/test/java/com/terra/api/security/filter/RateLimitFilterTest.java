@@ -101,6 +101,60 @@ class RateLimitFilterTest {
     }
 
     @Test
+    void shouldRateLimitPublicTwoFactorRecoveryRequestWithAuthCriticalPolicy() throws Exception {
+        RateLimitProperties properties = new RateLimitProperties();
+        properties.getAuthCritical().setEnabled(true);
+        properties.getAuthCritical().setCapacity(1);
+        properties.getAuthCritical().setRefillTokens(1);
+        properties.getAuthCritical().setRefillDurationSeconds(60);
+
+        MessageResolver messageResolver = new MessageResolver(new CurrentLanguageResolver());
+        RateLimitFilter filter = new RateLimitFilter(
+                new RateLimitService(),
+                properties,
+                messageResolver,
+                new ObjectMapper(),
+                clientIpResolver(false)
+        );
+
+        MockHttpServletResponse firstResponse = new MockHttpServletResponse();
+        filter.doFilter(newRequest("/api/auth/2fa/recovery/request"), firstResponse, new MockFilterChain());
+
+        MockHttpServletResponse blockedResponse = new MockHttpServletResponse();
+        filter.doFilter(newRequest("/api/auth/2fa/recovery/request"), blockedResponse, new MockFilterChain());
+
+        assertEquals(200, firstResponse.getStatus());
+        assertEquals(429, blockedResponse.getStatus());
+    }
+
+    @Test
+    void shouldUseEmailInPublicTwoFactorRecoveryKeySoDifferentAccountsDoNotShareSameBucket() throws Exception {
+        RateLimitProperties properties = new RateLimitProperties();
+        properties.getAuthCritical().setEnabled(true);
+        properties.getAuthCritical().setCapacity(1);
+        properties.getAuthCritical().setRefillTokens(1);
+        properties.getAuthCritical().setRefillDurationSeconds(60);
+
+        MessageResolver messageResolver = new MessageResolver(new CurrentLanguageResolver());
+        RateLimitFilter filter = new RateLimitFilter(
+                new RateLimitService(),
+                properties,
+                messageResolver,
+                new ObjectMapper(),
+                clientIpResolver(false)
+        );
+
+        MockHttpServletResponse firstResponse = new MockHttpServletResponse();
+        filter.doFilter(newRequest("/api/auth/2fa/recovery/request", "same-ip-1@l2terra.online"), firstResponse, new MockFilterChain());
+
+        MockHttpServletResponse secondResponse = new MockHttpServletResponse();
+        filter.doFilter(newRequest("/api/auth/2fa/recovery/request", "same-ip-2@l2terra.online"), secondResponse, new MockFilterChain());
+
+        assertEquals(200, firstResponse.getStatus());
+        assertEquals(200, secondResponse.getStatus());
+    }
+
+    @Test
     void shouldApplyDedicatedSessionReadPolicyToCurrentSessionEndpoint() throws Exception {
         RateLimitProperties properties = new RateLimitProperties();
         properties.getAuthSessionRead().setEnabled(true);

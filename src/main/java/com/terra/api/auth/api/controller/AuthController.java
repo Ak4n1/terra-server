@@ -2,18 +2,22 @@ package com.terra.api.auth.api.controller;
 
 import com.terra.api.auth.api.dto.AuthSessionResponse;
 import com.terra.api.auth.api.dto.AuthClientConfigResponse;
+import com.terra.api.auth.application.AuthLoginResult;
+import com.terra.api.auth.api.dto.ConfirmTwoFactorRecoveryRequest;
 import com.terra.api.auth.api.dto.ForgotPasswordRequest;
 import com.terra.api.auth.api.dto.LoginRequest;
 import com.terra.api.auth.api.dto.ResendVerificationRequest;
 import com.terra.api.auth.api.dto.RefreshSessionResponse;
 import com.terra.api.auth.api.dto.RegisterRequest;
 import com.terra.api.auth.api.dto.ResetPasswordRequest;
+import com.terra.api.auth.api.dto.TwoFactorRecoveryRequest;
 import com.terra.api.auth.api.dto.UpdatePreferredLanguageRequest;
 import com.terra.api.auth.api.dto.UserResponse;
 import com.terra.api.auth.api.dto.VerifyEmailRequest;
 import com.terra.api.auth.domain.model.AccountMaster;
 import com.terra.api.auth.domain.model.AccountSession;
 import com.terra.api.auth.application.AuthService;
+import com.terra.api.auth.application.AccountSecurityService;
 import com.terra.api.auth.application.EmailVerificationService;
 import com.terra.api.auth.application.PasswordResetService;
 import com.terra.api.common.domain.exception.ResourceConflictException;
@@ -46,10 +50,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
+import java.time.Duration;
+import org.springframework.http.ResponseCookie;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
+    private static final String TRUSTED_DEVICE_COOKIE_NAME = "terra_trusted_device";
+    private static final Duration TRUSTED_DEVICE_COOKIE_MAX_AGE = Duration.ofDays(30);
 
     private final AuthService authService;
     private final MessageResolver messageResolver;
@@ -61,6 +69,7 @@ public class AuthController {
     private final CsrfCookieService csrfCookieService;
     private final EmailVerificationService emailVerificationService;
     private final PasswordResetService passwordResetService;
+    private final AccountSecurityService accountSecurityService;
     private final RealtimeSessionRevocationService realtimeSessionRevocationService;
     private final IdempotencyService idempotencyService;
 
@@ -74,6 +83,7 @@ public class AuthController {
                           CsrfCookieService csrfCookieService,
                           EmailVerificationService emailVerificationService,
                           PasswordResetService passwordResetService,
+                          AccountSecurityService accountSecurityService,
                           RealtimeSessionRevocationService realtimeSessionRevocationService,
                           IdempotencyService idempotencyService) {
         this.authService = authService;
@@ -86,6 +96,7 @@ public class AuthController {
         this.csrfCookieService = csrfCookieService;
         this.emailVerificationService = emailVerificationService;
         this.passwordResetService = passwordResetService;
+        this.accountSecurityService = accountSecurityService;
         this.realtimeSessionRevocationService = realtimeSessionRevocationService;
         this.idempotencyService = idempotencyService;
     }
@@ -148,14 +159,37 @@ public class AuthController {
         ));
     }
 
+    @PostMapping("/2fa/recovery/request")
+    public ResponseEntity<ApiResponse<Void>> requestTwoFactorRecovery(@Valid @RequestBody TwoFactorRecoveryRequest request) {
+        accountSecurityService.requestTwoFactorRecoveryIfPossible(request.getEmail());
+        return ResponseEntity.ok(ApiResponse.of(
+                "auth.two_factor_recovery_email_sent",
+                messageResolver.get("auth.two_factor_recovery_email_sent")
+        ));
+    }
+
+    @PostMapping("/2fa/recovery/confirm")
+    public ResponseEntity<ApiResponse<Void>> confirmTwoFactorRecovery(@Valid @RequestBody ConfirmTwoFactorRecoveryRequest request) {
+        accountSecurityService.confirmTwoFactorRecovery(request);
+        return ResponseEntity.ok(ApiResponse.of(
+                "auth.two_factor_recovery_applied",
+                messageResolver.get("auth.two_factor_recovery_applied")
+        ));
+    }
+
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthSessionResponse>> login(@Valid @RequestBody LoginRequest request,
                                                                   HttpServletRequest httpServletRequest) {
-        AccountMaster accountMaster = authService.authenticate(request);
+        String trustedDeviceKey = extractCookieValue(httpServletRequest, TRUSTED_DEVICE_COOKIE_NAME);
+        AuthLoginResult loginResult = authService.authenticate(request, httpServletRequest, trustedDeviceKey);
+        AccountMaster accountMaster = loginResult.account();
         UserResponse user = authService.getCurrentUser(accountMaster.getEmail());
 
         HttpHeaders headers = new HttpHeaders();
         issueSession(headers, accountMaster, null, httpServletRequest);
+        if (loginResult.trustedDeviceKeyToSet() != null && !loginResult.trustedDeviceKeyToSet().isBlank()) {
+            addTrustedDeviceCookie(headers, loginResult.trustedDeviceKeyToSet());
+        }
         csrfCookieService.addCookie(headers, csrfCookieService.generateToken());
 
         return ResponseEntity.ok()
@@ -204,6 +238,7 @@ public class AuthController {
 
         HttpHeaders headers = new HttpHeaders();
         jwtCookieService.clearAuthenticationCookies(headers);
+        clearTrustedDeviceCookie(headers);
         csrfCookieService.clearCookie(headers);
 
         return ResponseEntity.ok()
@@ -217,6 +252,7 @@ public class AuthController {
 
         HttpHeaders headers = new HttpHeaders();
         jwtCookieService.clearAuthenticationCookies(headers);
+        clearTrustedDeviceCookie(headers);
         csrfCookieService.clearCookie(headers);
 
         return ResponseEntity.ok()
@@ -282,6 +318,26 @@ public class AuthController {
                 jwtService.extractExpiration(refreshToken, JwtTokenType.REFRESH),
                 request
         );
+    }
+
+    private void addTrustedDeviceCookie(HttpHeaders headers, String value) {
+        headers.add(HttpHeaders.SET_COOKIE, ResponseCookie.from(TRUSTED_DEVICE_COOKIE_NAME, value)
+                .httpOnly(jwtProperties.getCookie().isHttpOnly())
+                .secure(jwtProperties.getCookie().isSecure())
+                .sameSite(jwtProperties.getCookie().getSameSite())
+                .path(jwtProperties.getCookie().getPath())
+                .maxAge(TRUSTED_DEVICE_COOKIE_MAX_AGE)
+                .build().toString());
+    }
+
+    private void clearTrustedDeviceCookie(HttpHeaders headers) {
+        headers.add(HttpHeaders.SET_COOKIE, ResponseCookie.from(TRUSTED_DEVICE_COOKIE_NAME, "")
+                .httpOnly(jwtProperties.getCookie().isHttpOnly())
+                .secure(jwtProperties.getCookie().isSecure())
+                .sameSite(jwtProperties.getCookie().getSameSite())
+                .path(jwtProperties.getCookie().getPath())
+                .maxAge(Duration.ZERO)
+                .build().toString());
     }
 
     private ResponseEntity<ApiResponse<RefreshSessionResponse>> refreshInternal(HttpServletRequest request, String refreshToken) {

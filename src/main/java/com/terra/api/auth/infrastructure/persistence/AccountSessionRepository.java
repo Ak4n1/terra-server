@@ -5,6 +5,7 @@ import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -15,4 +16,10 @@ public interface AccountSessionRepository extends JpaRepository<AccountSession, 
     Optional<AccountSession> findWithLockByRefreshTokenHash(String refreshTokenHash);
 
     List<AccountSession> findByAccount_Id(Long accountId);
+
+    List<AccountSession> findByAccount_IdAndRevokedAtIsNullOrderByCreatedAtDesc(Long accountId);
+
+    List<AccountSession> findByAccount_IdAndRevokedAtIsNullAndExpiresAtAfterOrderByCreatedAtDesc(Long accountId, Instant now);
+
+    Optional<AccountSession> findByIdAndAccount_Id(Long sessionId, Long accountId);
 }

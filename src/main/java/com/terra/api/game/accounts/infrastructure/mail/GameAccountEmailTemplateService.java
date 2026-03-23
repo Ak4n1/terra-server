@@ -37,4 +37,17 @@ public class GameAccountEmailTemplateService {
         );
         asyncMailService.sendHtml(email, emailMessage.subject(), emailMessage.htmlBody());
     }
+
+    public void sendPasswordChangeCodeEmail(String email, String accountName, String code, long expiresInMinutes) {
+        SupportedLanguage language = currentLanguageResolver.resolve();
+        EmailMessage emailMessage = emailTemplateService.buildGameAccountPasswordChangeCodeMessage(
+                email,
+                accountName,
+                code,
+                mailProperties.getFrontendGameAccountsUrl(),
+                language,
+                expiresInMinutes
+        );
+        asyncMailService.sendHtml(email, emailMessage.subject(), emailMessage.htmlBody());
+    }
 }
