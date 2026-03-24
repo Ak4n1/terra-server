@@ -4,6 +4,7 @@ import com.terra.api.auth.api.dto.ResetPasswordRequest;
 import com.terra.api.auth.domain.model.AccountMaster;
 import com.terra.api.auth.domain.model.AccountVerification;
 import com.terra.api.auth.domain.model.AccountVerificationType;
+import com.terra.api.common.domain.exception.BadRequestException;
 import com.terra.api.auth.infrastructure.persistence.AccountMasterRepository;
 import com.terra.api.common.domain.exception.TooManyRequestsException;
 import com.terra.api.common.domain.i18n.SupportedLanguage;
@@ -15,6 +16,8 @@ import com.terra.api.mail.domain.EmailMessage;
 import com.terra.api.mail.application.EmailTemplateService;
 import com.terra.api.realtime.application.RealtimeSessionRevocationService;
 import com.terra.api.security.application.AccountSessionService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +30,7 @@ public class PasswordResetService {
 
     private static final long PASSWORD_RESET_EXPIRATION_MINUTES = 15L;
     private static final String PASSWORD_RESET_ACTION = "forgot-password";
+    private static final Logger log = LoggerFactory.getLogger(PasswordResetService.class);
 
     private final AccountMasterRepository accountMasterRepository;
     private final VerificationTokenService verificationTokenService;
@@ -111,10 +115,22 @@ public class PasswordResetService {
         );
 
         AccountMaster accountMaster = verification.getAccount();
-        accountMaster.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
-        accountMaster.setTokenVersion(accountMaster.getTokenVersion() + 1);
         verification.setUsedAt(Instant.now());
+        applyPasswordReset(accountMaster, request.getNewPassword(), "password_reset");
+    }
+
+    public void applyPasswordReset(AccountMaster accountMaster, String newPassword, String realtimeReason) {
+        if (passwordEncoder.matches(newPassword, accountMaster.getPasswordHash())) {
+            throw new BadRequestException("auth.password_same_as_current");
+        }
+
+        accountMaster.setPasswordHash(passwordEncoder.encode(newPassword));
+        accountMaster.setTokenVersion(accountMaster.getTokenVersion() + 1);
         accountSessionService.revokeAllSessions(accountMaster);
-        realtimeSessionRevocationService.revokeAccountSessions(accountMaster.getId(), "password_reset");
+        try {
+            realtimeSessionRevocationService.revokeAccountSessions(accountMaster.getId(), realtimeReason);
+        } catch (RuntimeException exception) {
+            log.warn("Realtime session revocation failed for accountId={}", accountMaster.getId(), exception);
+        }
     }
 }

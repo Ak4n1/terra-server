@@ -57,7 +57,7 @@ public class RealtimeSessionRegistry {
             }
             try {
                 session.close();
-            } catch (IOException ignored) {
+            } catch (IOException | RuntimeException ignored) {
                 // Best effort close during revocation.
             }
         }
@@ -71,7 +71,7 @@ public class RealtimeSessionRegistry {
             }
             try {
                 session.close();
-            } catch (IOException ignored) {
+            } catch (IOException | RuntimeException ignored) {
                 // Best effort close during revocation.
             }
         }

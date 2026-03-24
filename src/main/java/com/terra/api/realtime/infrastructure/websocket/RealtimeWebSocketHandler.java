@@ -6,6 +6,8 @@ import com.terra.api.realtime.api.dto.RealtimeEventType;
 import com.terra.api.realtime.application.RealtimeEventPublisher;
 import com.terra.api.realtime.application.RealtimeSessionService;
 import com.terra.api.realtime.domain.model.RealtimeSessionStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -24,6 +26,7 @@ public class RealtimeWebSocketHandler extends TextWebSocketHandler {
 
     private static final long HEARTBEAT_INTERVAL_SECONDS = 30L;
     private static final int MAX_CLIENT_MESSAGE_BYTES = 4 * 1024;
+    private static final Logger log = LoggerFactory.getLogger(RealtimeWebSocketHandler.class);
 
     private final ObjectMapper objectMapper;
     private final RealtimeSessionRegistry realtimeSessionRegistry;
@@ -113,13 +116,21 @@ public class RealtimeWebSocketHandler extends TextWebSocketHandler {
     }
 
     public void closeAccountSessions(Long accountId, String reason) {
-        realtimeSessionService.revokeActiveSessions(accountId, reason);
+        try {
+            realtimeSessionService.revokeActiveSessions(accountId, reason);
+        } catch (RuntimeException exception) {
+            log.warn("Realtime revokeActiveSessions failed for accountId={}", accountId, exception);
+        }
         realtimeEventPublisher.publishSessionRevoked(accountId, reason);
         realtimeSessionRegistry.closeAccountSessions(accountId);
     }
 
     public void closeAccountSession(Long accountSessionId, Long accountId, String reason) {
-        realtimeSessionService.revokeActiveSessionsByAccountSession(accountSessionId, reason);
+        try {
+            realtimeSessionService.revokeActiveSessionsByAccountSession(accountSessionId, reason);
+        } catch (RuntimeException exception) {
+            log.warn("Realtime revokeActiveSessionsByAccountSession failed for accountSessionId={}", accountSessionId, exception);
+        }
         realtimeEventPublisher.publishSessionRevoked(accountId, reason);
         realtimeSessionRegistry.closeAccountSessionSessions(accountSessionId);
     }
@@ -129,7 +140,12 @@ public class RealtimeWebSocketHandler extends TextWebSocketHandler {
         Long accountId = attribute(session, RealtimeHandshakeAttributes.ACCOUNT_ID, Long.class);
         Long accountSessionId = attribute(session, RealtimeHandshakeAttributes.ACCOUNT_SESSION_ID, Long.class);
         if (realtimeSessionId != null) {
-            realtimeSessionService.closeSession(realtimeSessionId, RealtimeSessionStatus.CLOSED, normalizeReason(reason));
+            try {
+                realtimeSessionService.closeSession(realtimeSessionId, RealtimeSessionStatus.CLOSED, normalizeReason(reason));
+            } catch (RuntimeException exception) {
+                // Best effort cleanup: a concurrent close/revoke must not bubble and break request flow.
+                log.debug("Ignoring realtime cleanup failure for realtimeSessionId={}", realtimeSessionId, exception);
+            }
         }
         if (realtimeSessionId != null && accountId != null && accountSessionId != null) {
             realtimeSessionRegistry.unregister(realtimeSessionId, accountId, accountSessionId);

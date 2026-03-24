@@ -7,6 +7,7 @@ import com.terra.api.realtime.domain.model.RealtimeSessionStatus;
 import com.terra.api.realtime.infrastructure.persistence.RealtimeSessionRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
@@ -49,7 +50,7 @@ public class RealtimeSessionService {
                 .ifPresent(session -> session.setLastSeenAt(Instant.now()));
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void closeSession(String realtimeSessionId, RealtimeSessionStatus status, String reason) {
         realtimeSessionRepository.findByRealtimeSessionId(realtimeSessionId)
                 .ifPresent(session -> {
@@ -60,7 +61,7 @@ public class RealtimeSessionService {
                 });
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public List<RealtimeSession> revokeActiveSessions(Long accountId, String reason) {
         List<RealtimeSession> sessions = realtimeSessionRepository.findByAccount_IdAndStatus(accountId, RealtimeSessionStatus.OPEN);
         for (RealtimeSession session : sessions) {
@@ -69,7 +70,7 @@ public class RealtimeSessionService {
         return sessions;
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public List<RealtimeSession> revokeActiveSessionsByAccountSession(Long accountSessionId, String reason) {
         List<RealtimeSession> sessions = realtimeSessionRepository.findByAccountSession_IdAndStatus(
                 accountSessionId,

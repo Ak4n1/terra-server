@@ -153,10 +153,15 @@ public class AuthController {
     @PostMapping("/reset-password")
     public ResponseEntity<ApiResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         passwordResetService.resetPassword(request);
-        return ResponseEntity.ok(ApiResponse.of(
-                "auth.password_reset_success",
-                messageResolver.get("auth.password_reset_success")
-        ));
+        HttpHeaders headers = new HttpHeaders();
+        jwtCookieService.clearAuthenticationCookies(headers);
+        csrfCookieService.clearCookie(headers);
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(ApiResponse.of(
+                        "auth.password_reset_success",
+                        messageResolver.get("auth.password_reset_success")
+                ));
     }
 
     @PostMapping("/2fa/recovery/request")
@@ -238,7 +243,6 @@ public class AuthController {
 
         HttpHeaders headers = new HttpHeaders();
         jwtCookieService.clearAuthenticationCookies(headers);
-        clearTrustedDeviceCookie(headers);
         csrfCookieService.clearCookie(headers);
 
         return ResponseEntity.ok()

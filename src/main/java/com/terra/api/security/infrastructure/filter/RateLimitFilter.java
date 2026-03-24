@@ -117,6 +117,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 || "/api/account/settings/security/2fa/recovery/confirm".equals(path)) {
             return rateLimitProperties.getAuthSession();
         }
+        if ("/api/account/settings/security/password/change/confirm".equals(path)
+                || "/api/account/settings/security/password/reset/request".equals(path)) {
+            return rateLimitProperties.getAuthSession();
+        }
         if ("/api/game-accounts/create-code".equals(path)
                 || "/api/game-accounts/verify-code".equals(path)
                 || "/api/game-accounts".equals(path)
@@ -176,6 +180,13 @@ public class RateLimitFilter extends OncePerRequestFilter {
         if ("/api/account/settings/security/status".equals(request.getRequestURI())
                 || "/api/account/settings/security/2fa/recovery/request".equals(request.getRequestURI())
                 || "/api/account/settings/security/2fa/recovery/confirm".equals(request.getRequestURI())) {
+            String accountIdentity = request.getUserPrincipal() == null
+                    ? "anonymous"
+                    : request.getUserPrincipal().getName();
+            return ipAddress + ":" + request.getRequestURI() + ":" + accountIdentity;
+        }
+        if ("/api/account/settings/security/password/change/confirm".equals(request.getRequestURI())
+                || "/api/account/settings/security/password/reset/request".equals(request.getRequestURI())) {
             String accountIdentity = request.getUserPrincipal() == null
                     ? "anonymous"
                     : request.getUserPrincipal().getName();

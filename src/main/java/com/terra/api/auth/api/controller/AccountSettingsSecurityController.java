@@ -1,10 +1,12 @@
 package com.terra.api.auth.api.controller;
 
 import com.terra.api.auth.api.dto.AccountSecurityStatusResponse;
+import com.terra.api.auth.api.dto.ChangeAccountPasswordRequest;
 import com.terra.api.auth.api.dto.ConfirmTwoFactorRecoveryRequest;
 import com.terra.api.auth.api.dto.TrustedDeviceResponse;
 import com.terra.api.auth.api.dto.TwoFactorSetupInitResponse;
 import com.terra.api.auth.api.dto.TwoFactorSetupVerifyRequest;
+import com.terra.api.auth.application.AccountPasswordSecurityService;
 import com.terra.api.auth.application.AccountSecurityService;
 import com.terra.api.auth.application.TwoFactorSetupVerificationResult;
 import com.terra.api.common.infrastructure.i18n.MessageResolver;
@@ -43,6 +45,7 @@ public class AccountSettingsSecurityController {
     private static final Duration TRUSTED_DEVICE_COOKIE_MAX_AGE = Duration.ofDays(30);
 
     private final AccountSecurityService accountSecurityService;
+    private final AccountPasswordSecurityService accountPasswordSecurityService;
     private final MessageResolver messageResolver;
     private final IdempotencyService idempotencyService;
     private final JwtProperties jwtProperties;
@@ -51,6 +54,7 @@ public class AccountSettingsSecurityController {
     private final AccountSessionService accountSessionService;
 
     public AccountSettingsSecurityController(AccountSecurityService accountSecurityService,
+                                             AccountPasswordSecurityService accountPasswordSecurityService,
                                              MessageResolver messageResolver,
                                              IdempotencyService idempotencyService,
                                              JwtProperties jwtProperties,
@@ -58,6 +62,7 @@ public class AccountSettingsSecurityController {
                                              JwtCookieService jwtCookieService,
                                              AccountSessionService accountSessionService) {
         this.accountSecurityService = accountSecurityService;
+        this.accountPasswordSecurityService = accountPasswordSecurityService;
         this.messageResolver = messageResolver;
         this.idempotencyService = idempotencyService;
         this.jwtProperties = jwtProperties;
@@ -150,6 +155,39 @@ public class AccountSettingsSecurityController {
         return (ResponseEntity<ApiResponse<Void>>) (ResponseEntity<?>) response;
     }
 
+    @PostMapping("/password/change/confirm")
+    @SuppressWarnings("unchecked")
+    public ResponseEntity<ApiResponse<Void>> confirmPasswordChange(Authentication authentication,
+                                                                   @Valid @RequestBody ChangeAccountPasswordRequest request,
+                                                                   @RequestHeader(name = "Idempotency-Key", required = false) String idempotencyKey) {
+        String scope = "account.settings.security.password.change.confirm";
+        String requestHash = idempotencyService.hash(scope, hashPayload(authentication.getName(), request));
+
+        ResponseEntity<ApiResponse> response = idempotencyService.execute(
+                scope,
+                idempotencyKey,
+                requestHash,
+                () -> confirmPasswordChangeInternal(authentication, request)
+        );
+        return (ResponseEntity<ApiResponse<Void>>) (ResponseEntity<?>) response;
+    }
+
+    @PostMapping("/password/reset/request")
+    @SuppressWarnings("unchecked")
+    public ResponseEntity<ApiResponse<Void>> requestPasswordReset(Authentication authentication,
+                                                                  @RequestHeader(name = "Idempotency-Key", required = false) String idempotencyKey) {
+        String scope = "account.settings.security.password.reset.request";
+        String requestHash = idempotencyService.hash(scope, hashPayload(authentication.getName()));
+
+        ResponseEntity<ApiResponse> response = idempotencyService.execute(
+                scope,
+                idempotencyKey,
+                requestHash,
+                () -> requestPasswordResetInternal(authentication)
+        );
+        return (ResponseEntity<ApiResponse<Void>>) (ResponseEntity<?>) response;
+    }
+
     @DeleteMapping("/trusted-devices/{sessionId}")
     public ResponseEntity<ApiResponse<Void>> revokeTrustedDevice(Authentication authentication,
                                                                  @PathVariable Long sessionId) {
@@ -183,6 +221,36 @@ public class AccountSettingsSecurityController {
         payload.put("email", email);
         payload.put("token", request.getToken());
         return payload;
+    }
+
+    private Map<String, Object> hashPayload(String email, ChangeAccountPasswordRequest request) {
+        LinkedHashMap<String, Object> payload = new LinkedHashMap<>();
+        payload.put("email", email);
+        payload.put("newPassword", request.getNewPassword());
+        return payload;
+    }
+
+    private Map<String, Object> hashPayload(String email) {
+        LinkedHashMap<String, Object> payload = new LinkedHashMap<>();
+        payload.put("email", email);
+        return payload;
+    }
+
+    private ResponseEntity<ApiResponse> confirmPasswordChangeInternal(Authentication authentication,
+                                                                      ChangeAccountPasswordRequest request) {
+        accountPasswordSecurityService.changePassword(authentication.getName(), request);
+        return ResponseEntity.ok(ApiResponse.of(
+                "auth.password_changed",
+                messageResolver.get("auth.password_changed")
+        ));
+    }
+
+    private ResponseEntity<ApiResponse> requestPasswordResetInternal(Authentication authentication) {
+        accountPasswordSecurityService.requestResetEmail(authentication.getName());
+        return ResponseEntity.ok(ApiResponse.of(
+                "auth.password_reset_email_sent",
+                messageResolver.get("auth.password_reset_email_sent")
+        ));
     }
 
     private String extractCookieValue(HttpServletRequest request, String cookieName) {
