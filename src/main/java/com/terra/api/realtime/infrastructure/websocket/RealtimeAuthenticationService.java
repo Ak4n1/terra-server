@@ -50,15 +50,23 @@ public class RealtimeAuthenticationService {
             throw new JwtAuthenticationException("auth.invalid_refresh_token");
         }
 
-        Long accountId = jwtService.extractAccountId(accessToken, JwtTokenType.ACCESS);
-        AccountMaster accountMaster = accountMasterRepository.findById(accountId)
+        String accountPublicId = jwtService.extractAccountPublicId(
+                accessToken,
+                JwtTokenType.ACCESS,
+                jwtProperties.getAudienceRealtime()
+        );
+        AccountMaster accountMaster = accountMasterRepository.findByPublicId(accountPublicId)
                 .orElseThrow(() -> new JwtAuthenticationException("auth.invalid_token"));
         AccountSession accountSession = accountSessionService.getActiveSession(refreshToken);
-        if (!accountSession.getAccount().getId().equals(accountId)) {
+        if (!accountSession.getAccount().getId().equals(accountMaster.getId())) {
             throw new JwtAuthenticationException("auth.invalid_refresh_token");
         }
 
-        long tokenVersion = jwtService.extractTokenVersion(accessToken, JwtTokenType.ACCESS);
+        long tokenVersion = jwtService.extractTokenVersion(
+                accessToken,
+                JwtTokenType.ACCESS,
+                jwtProperties.getAudienceRealtime()
+        );
         if (tokenVersion != accountMaster.getTokenVersion()) {
             throw new JwtAuthenticationException("auth.invalid_token");
         }

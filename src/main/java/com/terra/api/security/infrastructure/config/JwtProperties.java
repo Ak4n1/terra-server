@@ -2,10 +2,17 @@ package com.terra.api.security.infrastructure.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @ConfigurationProperties(prefix = "jwt")
 public class JwtProperties {
 
     private String secret;
+    private String issuer;
+    private String audienceApi;
+    private String audienceRealtime;
+    private List<String> allowedAlgorithms = new ArrayList<>();
     private long accessTokenExpirationMinutes;
     private long refreshTokenExpirationDays;
     private String accessCookieName;
@@ -18,6 +25,38 @@ public class JwtProperties {
 
     public void setSecret(String secret) {
         this.secret = secret;
+    }
+
+    public String getIssuer() {
+        return issuer;
+    }
+
+    public void setIssuer(String issuer) {
+        this.issuer = issuer;
+    }
+
+    public String getAudienceApi() {
+        return audienceApi;
+    }
+
+    public void setAudienceApi(String audienceApi) {
+        this.audienceApi = audienceApi;
+    }
+
+    public String getAudienceRealtime() {
+        return audienceRealtime;
+    }
+
+    public void setAudienceRealtime(String audienceRealtime) {
+        this.audienceRealtime = audienceRealtime;
+    }
+
+    public List<String> getAllowedAlgorithms() {
+        return allowedAlgorithms;
+    }
+
+    public void setAllowedAlgorithms(List<String> allowedAlgorithms) {
+        this.allowedAlgorithms = allowedAlgorithms;
     }
 
     public long getAccessTokenExpirationMinutes() {

@@ -1,8 +1,10 @@
 package com.terra.api.auth.application;
 
+import com.terra.api.auth.api.dto.ConfirmTwoFactorRecoveryRequest;
 import com.terra.api.auth.api.dto.TwoFactorSetupVerifyRequest;
 import com.terra.api.auth.domain.model.AccountMaster;
 import com.terra.api.auth.domain.model.AccountTrustedDevice;
+import com.terra.api.auth.domain.model.AccountVerification;
 import com.terra.api.auth.domain.model.AccountVerificationType;
 import com.terra.api.auth.infrastructure.config.TwoFactorRecoveryProperties;
 import com.terra.api.auth.infrastructure.persistence.AccountTrustedDeviceRepository;
@@ -12,6 +14,7 @@ import com.terra.api.mail.application.AsyncMailService;
 import com.terra.api.mail.application.EmailTemplateService;
 import com.terra.api.mail.domain.EmailMessage;
 import com.terra.api.mail.infrastructure.config.MailProperties;
+import com.terra.api.realtime.application.RealtimeSessionRevocationService;
 import com.terra.api.security.application.AccountSessionService;
 import com.terra.api.security.application.ClientIpResolver;
 import dev.samstevens.totp.code.CodeVerifier;
@@ -25,7 +28,9 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -49,6 +54,7 @@ class AccountSecurityServiceTest {
         AccountTrustedDeviceRepository trustedDeviceRepository = mock(AccountTrustedDeviceRepository.class);
         TwoFactorRecoveryProperties twoFactorRecoveryProperties = new TwoFactorRecoveryProperties();
         AccountSessionService accountSessionService = mock(AccountSessionService.class);
+        RealtimeSessionRevocationService realtimeSessionRevocationService = mock(RealtimeSessionRevocationService.class);
         ClientIpResolver clientIpResolver = mock(ClientIpResolver.class);
 
         AccountSecurityService service = new AccountSecurityService(
@@ -62,6 +68,7 @@ class AccountSecurityServiceTest {
                 trustedDeviceRepository,
                 twoFactorRecoveryProperties,
                 accountSessionService,
+                realtimeSessionRevocationService,
                 clientIpResolver
         );
         CodeVerifier codeVerifier = mock(CodeVerifier.class);
@@ -108,6 +115,7 @@ class AccountSecurityServiceTest {
         AccountTrustedDeviceRepository trustedDeviceRepository = mock(AccountTrustedDeviceRepository.class);
         TwoFactorRecoveryProperties twoFactorRecoveryProperties = new TwoFactorRecoveryProperties();
         AccountSessionService accountSessionService = mock(AccountSessionService.class);
+        RealtimeSessionRevocationService realtimeSessionRevocationService = mock(RealtimeSessionRevocationService.class);
         ClientIpResolver clientIpResolver = mock(ClientIpResolver.class);
 
         AccountSecurityService service = new AccountSecurityService(
@@ -121,6 +129,7 @@ class AccountSecurityServiceTest {
                 trustedDeviceRepository,
                 twoFactorRecoveryProperties,
                 accountSessionService,
+                realtimeSessionRevocationService,
                 clientIpResolver
         );
         CodeVerifier codeVerifier = mock(CodeVerifier.class);
@@ -149,7 +158,7 @@ class AccountSecurityServiceTest {
         verify(accountSessionService, never()).revokeAllSessionsExcept(any(), any());
         verify(trustedDeviceRepository).save(any(AccountTrustedDevice.class));
         verify(trustedDeviceRepository, never()).findByAccount_IdAndRevokedAtIsNull(anyLong());
-        org.junit.jupiter.api.Assertions.assertEquals(5L, account.getTokenVersion());
+        assertEquals(5L, account.getTokenVersion());
     }
 
     @Test
@@ -165,6 +174,7 @@ class AccountSecurityServiceTest {
         TwoFactorRecoveryProperties twoFactorRecoveryProperties = new TwoFactorRecoveryProperties();
         twoFactorRecoveryProperties.setRequestCooldownMinutes(2);
         AccountSessionService accountSessionService = mock(AccountSessionService.class);
+        RealtimeSessionRevocationService realtimeSessionRevocationService = mock(RealtimeSessionRevocationService.class);
         ClientIpResolver clientIpResolver = mock(ClientIpResolver.class);
 
         AccountSecurityService service = new AccountSecurityService(
@@ -178,6 +188,7 @@ class AccountSecurityServiceTest {
                 trustedDeviceRepository,
                 twoFactorRecoveryProperties,
                 accountSessionService,
+                realtimeSessionRevocationService,
                 clientIpResolver
         );
 
@@ -205,6 +216,7 @@ class AccountSecurityServiceTest {
         AccountTrustedDeviceRepository trustedDeviceRepository = mock(AccountTrustedDeviceRepository.class);
         TwoFactorRecoveryProperties twoFactorRecoveryProperties = new TwoFactorRecoveryProperties();
         AccountSessionService accountSessionService = mock(AccountSessionService.class);
+        RealtimeSessionRevocationService realtimeSessionRevocationService = mock(RealtimeSessionRevocationService.class);
         ClientIpResolver clientIpResolver = mock(ClientIpResolver.class);
 
         AccountSecurityService service = new AccountSecurityService(
@@ -218,6 +230,7 @@ class AccountSecurityServiceTest {
                 trustedDeviceRepository,
                 twoFactorRecoveryProperties,
                 accountSessionService,
+                realtimeSessionRevocationService,
                 clientIpResolver
         );
 
@@ -250,6 +263,7 @@ class AccountSecurityServiceTest {
         AccountTrustedDeviceRepository trustedDeviceRepository = mock(AccountTrustedDeviceRepository.class);
         TwoFactorRecoveryProperties twoFactorRecoveryProperties = new TwoFactorRecoveryProperties();
         AccountSessionService accountSessionService = mock(AccountSessionService.class);
+        RealtimeSessionRevocationService realtimeSessionRevocationService = mock(RealtimeSessionRevocationService.class);
         ClientIpResolver clientIpResolver = mock(ClientIpResolver.class);
 
         AccountSecurityService service = new AccountSecurityService(
@@ -263,6 +277,7 @@ class AccountSecurityServiceTest {
                 trustedDeviceRepository,
                 twoFactorRecoveryProperties,
                 accountSessionService,
+                realtimeSessionRevocationService,
                 clientIpResolver
         );
 
@@ -285,6 +300,7 @@ class AccountSecurityServiceTest {
         AccountTrustedDeviceRepository trustedDeviceRepository = mock(AccountTrustedDeviceRepository.class);
         TwoFactorRecoveryProperties twoFactorRecoveryProperties = new TwoFactorRecoveryProperties();
         AccountSessionService accountSessionService = mock(AccountSessionService.class);
+        RealtimeSessionRevocationService realtimeSessionRevocationService = mock(RealtimeSessionRevocationService.class);
         ClientIpResolver clientIpResolver = mock(ClientIpResolver.class);
 
         AccountSecurityService service = new AccountSecurityService(
@@ -298,6 +314,7 @@ class AccountSecurityServiceTest {
                 trustedDeviceRepository,
                 twoFactorRecoveryProperties,
                 accountSessionService,
+                realtimeSessionRevocationService,
                 clientIpResolver
         );
 
@@ -306,5 +323,70 @@ class AccountSecurityServiceTest {
 
         assertDoesNotThrow(() -> service.requestTwoFactorRecoveryIfPossible("player@l2terra.online"));
         verify(asyncMailService, never()).sendHtml(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void shouldRevokeSessionsDevicesAndRotateTokenVersionWhenConfirmingTwoFactorRecovery() {
+        AuthService authService = mock(AuthService.class);
+        VerificationTokenService verificationTokenService = mock(VerificationTokenService.class);
+        EmailTemplateService emailTemplateService = mock(EmailTemplateService.class);
+        AsyncMailService asyncMailService = mock(AsyncMailService.class);
+        MailProperties mailProperties = mock(MailProperties.class);
+        PasswordEncoder passwordEncoder = mock(PasswordEncoder.class);
+        CurrentLanguageResolver currentLanguageResolver = mock(CurrentLanguageResolver.class);
+        AccountTrustedDeviceRepository trustedDeviceRepository = mock(AccountTrustedDeviceRepository.class);
+        TwoFactorRecoveryProperties twoFactorRecoveryProperties = new TwoFactorRecoveryProperties();
+        AccountSessionService accountSessionService = mock(AccountSessionService.class);
+        RealtimeSessionRevocationService realtimeSessionRevocationService = mock(RealtimeSessionRevocationService.class);
+        ClientIpResolver clientIpResolver = mock(ClientIpResolver.class);
+
+        AccountSecurityService service = new AccountSecurityService(
+                authService,
+                verificationTokenService,
+                emailTemplateService,
+                asyncMailService,
+                mailProperties,
+                passwordEncoder,
+                currentLanguageResolver,
+                trustedDeviceRepository,
+                twoFactorRecoveryProperties,
+                accountSessionService,
+                realtimeSessionRevocationService,
+                clientIpResolver
+        );
+
+        AccountMaster account = new AccountMaster();
+        ReflectionTestUtils.setField(account, "id", 10L);
+        account.setPasswordHash("encoded-password");
+        account.setTwoFactorEnabled(true);
+        account.setTwoFactorSecret("JBSWY3DPEHPK3PXP");
+        account.setTwoFactorEnabledAt(Instant.now());
+        account.setTwoFactorRecoveryRequestedAt(Instant.now());
+        account.setTokenVersion(7L);
+
+        AccountVerification verification = new AccountVerification();
+        verification.setAccount(account);
+        AccountTrustedDevice trustedDevice = new AccountTrustedDevice();
+
+        when(verificationTokenService.getActiveVerification(
+                "recovery-token",
+                AccountVerificationType.TWO_FACTOR_RECOVERY,
+                "auth.invalid_two_factor_recovery_token"
+        )).thenReturn(verification);
+        when(passwordEncoder.matches("current-password", "encoded-password")).thenReturn(true);
+        when(trustedDeviceRepository.findByAccount_IdAndRevokedAtIsNull(10L)).thenReturn(List.of(trustedDevice));
+
+        ConfirmTwoFactorRecoveryRequest request = new ConfirmTwoFactorRecoveryRequest();
+        request.setToken("recovery-token");
+        request.setCurrentPassword("current-password");
+
+        service.confirmTwoFactorRecovery(request);
+
+        assertFalse(account.isTwoFactorEnabled());
+        assertEquals(8L, account.getTokenVersion());
+        assertNotNull(verification.getUsedAt());
+        assertNotNull(trustedDevice.getRevokedAt());
+        verify(accountSessionService).revokeAllSessions(account);
+        verify(realtimeSessionRevocationService).revokeAccountSessions(10L, "two_factor_recovery");
     }
 }

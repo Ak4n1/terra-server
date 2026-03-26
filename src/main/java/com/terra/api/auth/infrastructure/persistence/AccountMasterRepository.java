@@ -13,6 +13,7 @@ public interface AccountMasterRepository extends JpaRepository<AccountMaster, Lo
     boolean existsByEmailIgnoreCase(String email);
 
     Optional<AccountMaster> findByEmailIgnoreCase(String email);
+    Optional<AccountMaster> findByPublicId(String publicId);
 
     List<AccountMaster> findDistinctByRoles_Name(RoleName roleName);
 

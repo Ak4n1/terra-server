@@ -24,12 +24,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 public class GameAccountCreationService {
@@ -38,6 +38,7 @@ public class GameAccountCreationService {
     private static final long CODE_COOLDOWN_SECONDS = 30L;
     private static final int MAX_VERIFY_ATTEMPTS = 5;
     private static final String CREATE_CODE_ACTION = "game-create-account-code";
+    private final SecureRandom secureRandom = new SecureRandom();
 
     private final AccountMasterRepository accountMasterRepository;
     private final GameAccountCreationCodeRepository creationCodeRepository;
@@ -183,13 +184,13 @@ public class GameAccountCreationService {
     }
 
     private String generateCode() {
-        int code = ThreadLocalRandom.current().nextInt(0, 1_000_000);
+        int code = secureRandom.nextInt(1_000_000);
         return String.format("%06d", code);
     }
 
     private String generateVerificationToken() {
         byte[] randomBytes = new byte[32];
-        ThreadLocalRandom.current().nextBytes(randomBytes);
+        secureRandom.nextBytes(randomBytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
     }
 

@@ -36,6 +36,7 @@ public class ProductionSecurityValidator implements ApplicationRunner {
         }
 
         validateJwtSecret();
+        validateJwtClaimsPolicy();
         validateCookieSecurity();
         validateCorsOrigins();
     }
@@ -44,6 +45,21 @@ public class ProductionSecurityValidator implements ApplicationRunner {
         String secret = jwtProperties.getSecret();
         if (secret == null || secret.isBlank() || DEFAULT_JWT_SECRET.equals(secret)) {
             throw new IllegalStateException("Production requires a strong JWT secret configured outside default values.");
+        }
+    }
+
+    private void validateJwtClaimsPolicy() {
+        if (jwtProperties.getIssuer() == null || jwtProperties.getIssuer().isBlank()) {
+            throw new IllegalStateException("Production requires jwt.issuer.");
+        }
+        if (jwtProperties.getAudienceApi() == null || jwtProperties.getAudienceApi().isBlank()) {
+            throw new IllegalStateException("Production requires jwt.audience-api.");
+        }
+        if (jwtProperties.getAudienceRealtime() == null || jwtProperties.getAudienceRealtime().isBlank()) {
+            throw new IllegalStateException("Production requires jwt.audience-realtime.");
+        }
+        if (jwtProperties.getAllowedAlgorithms() == null || jwtProperties.getAllowedAlgorithms().isEmpty()) {
+            throw new IllegalStateException("Production requires jwt.allowed-algorithms.");
         }
     }
 

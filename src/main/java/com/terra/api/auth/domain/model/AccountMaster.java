@@ -18,6 +18,7 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 @Entity
 @Table(name = "account_master")
@@ -30,6 +31,9 @@ public class AccountMaster {
 
     @Column(name = "email", nullable = false, unique = true, length = 255)
     private String email;
+
+    @Column(name = "public_id", nullable = false, unique = true, length = 36)
+    private String publicId;
 
     @Column(name = "username", length = 24)
     private String username;
@@ -96,6 +100,9 @@ public class AccountMaster {
     void onCreate() {
         createdAt = Instant.now();
         tokenVersion = 0L;
+        if (publicId == null || publicId.isBlank()) {
+            publicId = UUID.randomUUID().toString();
+        }
         if (preferredLanguage == null) {
             preferredLanguage = SupportedLanguage.defaultLanguage();
         }
@@ -110,6 +117,14 @@ public class AccountMaster {
 
     public String getEmail() {
         return email;
+    }
+
+    public String getPublicId() {
+        return publicId;
+    }
+
+    public void setPublicId(String publicId) {
+        this.publicId = publicId;
     }
 
     public void setEmail(String email) {

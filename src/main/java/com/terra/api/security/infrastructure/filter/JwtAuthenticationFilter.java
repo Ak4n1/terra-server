@@ -44,17 +44,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String accessToken = extractCookieValue(request, jwtProperties.getAccessCookieName());
             if (accessToken != null && !accessToken.isBlank()) {
                 try {
-                    Long accountId = jwtService.extractAccountId(accessToken, JwtTokenType.ACCESS);
-                    AccountMaster accountMaster = accountMasterRepository.findById(accountId).orElse(null);
+                    String accountPublicId = jwtService.extractAccountPublicId(
+                            accessToken,
+                            JwtTokenType.ACCESS,
+                            jwtProperties.getAudienceApi()
+                    );
+                    AccountMaster accountMaster = accountMasterRepository.findByPublicId(accountPublicId).orElse(null);
+                    long tokenVersion = jwtService.extractTokenVersion(
+                            accessToken,
+                            JwtTokenType.ACCESS,
+                            jwtProperties.getAudienceApi()
+                    );
                     if (accountMaster != null
                             && accountMaster.isEnabled()
-                            && jwtService.extractTokenVersion(accessToken, JwtTokenType.ACCESS) == accountMaster.getTokenVersion()) {
+                            && tokenVersion == accountMaster.getTokenVersion()) {
                         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                                 accountMaster.getEmail(),
                                 null,
                                 accountMaster.getRoles().stream()
                                         .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getName().name()))
-                                        .collect(Collectors.toSet())
+                                .collect(Collectors.toSet())
                         );
                         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                         SecurityContextHolder.getContext().setAuthentication(authentication);

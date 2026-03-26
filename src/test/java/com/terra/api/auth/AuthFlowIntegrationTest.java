@@ -242,6 +242,36 @@ class AuthFlowIntegrationTest {
     }
 
     @Test
+    void refreshShouldRecoverSessionWhenAccessTokenIsInvalid() throws Exception {
+        registerAndVerify("player4-recover@l2terra.online");
+        MvcResult loginResult = login("player4-recover@l2terra.online");
+
+        Cookie tamperedAccessCookie = new Cookie("terra_access_token",
+                getSetCookie(loginResult, "terra_access_token").value() + "tampered");
+        Cookie refreshCookie = new Cookie("terra_refresh_token", getSetCookie(loginResult, "terra_refresh_token").value());
+        Cookie csrfCookie = new Cookie("XSRF-TOKEN", getSetCookie(loginResult, "XSRF-TOKEN").value());
+
+        mockMvc.perform(get("/api/auth/me").cookie(tamperedAccessCookie))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("auth.unauthorized"));
+
+        MvcResult refreshResult = mockMvc.perform(post("/api/auth/refresh")
+                        .cookie(refreshCookie, csrfCookie)
+                        .header("X-CSRF-TOKEN", csrfCookie.getValue()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("auth.token_refreshed"))
+                .andReturn();
+
+        Cookie rotatedAccessCookie = refreshResult.getResponse().getCookie("terra_access_token");
+        assertNotNull(rotatedAccessCookie);
+        assertFalse(rotatedAccessCookie.getValue().isBlank());
+
+        mockMvc.perform(get("/api/auth/me").cookie(rotatedAccessCookie))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.email").value("player4-recover@l2terra.online"));
+    }
+
+    @Test
     void logoutShouldRevokeSessionAndClearCookies() throws Exception {
         registerAndVerify("player5@l2terra.online");
         MvcResult loginResult = login("player5@l2terra.online");

@@ -33,9 +33,9 @@ import com.terra.api.security.infrastructure.config.JwtProperties;
 import com.terra.api.security.infrastructure.config.CsrfProperties;
 import com.terra.api.security.domain.JwtAuthenticationException;
 import com.terra.api.security.infrastructure.jwt.JwtService;
-import com.terra.api.security.domain.JwtTokenType;
 import com.terra.api.realtime.application.RealtimeSessionRevocationService;
 import com.terra.api.security.application.AccountSessionService;
+import com.terra.api.security.infrastructure.token.OpaqueTokenService;
 import com.terra.api.security.infrastructure.web.CsrfCookieService;
 import com.terra.api.security.infrastructure.web.JwtCookieService;
 import jakarta.servlet.http.Cookie;
@@ -50,6 +50,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
+import java.time.Instant;
 import java.time.Duration;
 import org.springframework.http.ResponseCookie;
 
@@ -72,6 +73,7 @@ public class AuthController {
     private final AccountSecurityService accountSecurityService;
     private final RealtimeSessionRevocationService realtimeSessionRevocationService;
     private final IdempotencyService idempotencyService;
+    private final OpaqueTokenService opaqueTokenService;
 
     public AuthController(AuthService authService,
                           MessageResolver messageResolver,
@@ -85,7 +87,8 @@ public class AuthController {
                           PasswordResetService passwordResetService,
                           AccountSecurityService accountSecurityService,
                           RealtimeSessionRevocationService realtimeSessionRevocationService,
-                          IdempotencyService idempotencyService) {
+                          IdempotencyService idempotencyService,
+                          OpaqueTokenService opaqueTokenService) {
         this.authService = authService;
         this.messageResolver = messageResolver;
         this.jwtService = jwtService;
@@ -99,6 +102,7 @@ public class AuthController {
         this.accountSecurityService = accountSecurityService;
         this.realtimeSessionRevocationService = realtimeSessionRevocationService;
         this.idempotencyService = idempotencyService;
+        this.opaqueTokenService = opaqueTokenService;
     }
 
     @PostMapping("/register")
@@ -210,10 +214,14 @@ public class AuthController {
             throw new JwtAuthenticationException("auth.invalid_refresh_token");
         }
 
-        Long accountId = jwtService.extractAccountId(refreshToken, JwtTokenType.REFRESH);
+        AccountSession activeSession = accountSessionService.getActiveSession(refreshToken);
+        Long accountId = activeSession.getAccount().getId();
         String requestHash = idempotencyService.hash(
                 "auth.refresh",
-                Map.of("accountId", accountId)
+                Map.of(
+                        "accountId", accountId,
+                        "sessionId", activeSession.getId()
+                )
         );
 
         return idempotencyService.execute(
@@ -300,7 +308,7 @@ public class AuthController {
                               String currentRefreshToken,
                               HttpServletRequest request) {
         String accessToken = jwtService.generateAccessToken(accountMaster);
-        String refreshToken = jwtService.generateRefreshToken(accountMaster);
+        String refreshToken = opaqueTokenService.generate();
 
         jwtCookieService.addAccessTokenCookie(headers, accessToken);
         jwtCookieService.addRefreshTokenCookie(headers, refreshToken);
@@ -309,7 +317,7 @@ public class AuthController {
             accountSessionService.createSession(
                     accountMaster,
                     refreshToken,
-                    jwtService.extractExpiration(refreshToken, JwtTokenType.REFRESH),
+                    nextRefreshExpiration(),
                     request
             );
             return;
@@ -319,7 +327,7 @@ public class AuthController {
                 accountMaster,
                 currentRefreshToken,
                 refreshToken,
-                jwtService.extractExpiration(refreshToken, JwtTokenType.REFRESH),
+                nextRefreshExpiration(),
                 request
         );
     }
@@ -345,12 +353,9 @@ public class AuthController {
     }
 
     private ResponseEntity<ApiResponse<RefreshSessionResponse>> refreshInternal(HttpServletRequest request, String refreshToken) {
-        accountSessionService.getActiveSession(refreshToken);
-        Long accountId = jwtService.extractAccountId(refreshToken, JwtTokenType.REFRESH);
+        AccountSession activeSession = accountSessionService.getActiveSession(refreshToken);
+        Long accountId = activeSession.getAccount().getId();
         AccountMaster accountMaster = authService.getCurrentUserAccount(accountId);
-        if (jwtService.extractTokenVersion(refreshToken, JwtTokenType.REFRESH) != accountMaster.getTokenVersion()) {
-            throw new JwtAuthenticationException("auth.invalid_refresh_token");
-        }
 
         HttpHeaders headers = new HttpHeaders();
         issueSession(headers, accountMaster, refreshToken, request);
@@ -363,5 +368,9 @@ public class AuthController {
                         messageResolver.get("auth.token_refreshed"),
                         new RefreshSessionResponse("refreshed")
                 ));
+    }
+
+    private Instant nextRefreshExpiration() {
+        return Instant.now().plus(Duration.ofDays(jwtProperties.getRefreshTokenExpirationDays()));
     }
 }

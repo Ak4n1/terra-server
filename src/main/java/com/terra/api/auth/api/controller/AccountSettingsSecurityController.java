@@ -15,7 +15,7 @@ import com.terra.api.idempotency.application.IdempotencyService;
 import com.terra.api.security.application.AccountSessionService;
 import com.terra.api.security.infrastructure.config.JwtProperties;
 import com.terra.api.security.infrastructure.jwt.JwtService;
-import com.terra.api.security.domain.JwtTokenType;
+import com.terra.api.security.infrastructure.token.OpaqueTokenService;
 import com.terra.api.security.infrastructure.web.JwtCookieService;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.Cookie;
@@ -34,6 +34,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +53,7 @@ public class AccountSettingsSecurityController {
     private final JwtService jwtService;
     private final JwtCookieService jwtCookieService;
     private final AccountSessionService accountSessionService;
+    private final OpaqueTokenService opaqueTokenService;
 
     public AccountSettingsSecurityController(AccountSecurityService accountSecurityService,
                                              AccountPasswordSecurityService accountPasswordSecurityService,
@@ -60,7 +62,8 @@ public class AccountSettingsSecurityController {
                                              JwtProperties jwtProperties,
                                              JwtService jwtService,
                                              JwtCookieService jwtCookieService,
-                                             AccountSessionService accountSessionService) {
+                                             AccountSessionService accountSessionService,
+                                             OpaqueTokenService opaqueTokenService) {
         this.accountSecurityService = accountSecurityService;
         this.accountPasswordSecurityService = accountPasswordSecurityService;
         this.messageResolver = messageResolver;
@@ -69,6 +72,7 @@ public class AccountSettingsSecurityController {
         this.jwtService = jwtService;
         this.jwtCookieService = jwtCookieService;
         this.accountSessionService = accountSessionService;
+        this.opaqueTokenService = opaqueTokenService;
     }
 
     @GetMapping("/status")
@@ -294,7 +298,7 @@ public class AccountSettingsSecurityController {
                                      String currentRefreshToken,
                                      HttpServletRequest request) {
         String accessToken = jwtService.generateAccessToken(verificationResult.account());
-        String refreshToken = jwtService.generateRefreshToken(verificationResult.account());
+        String refreshToken = opaqueTokenService.generate();
         jwtCookieService.addAccessTokenCookie(headers, accessToken);
         jwtCookieService.addRefreshTokenCookie(headers, refreshToken);
 
@@ -302,7 +306,7 @@ public class AccountSettingsSecurityController {
             accountSessionService.createSession(
                     verificationResult.account(),
                     refreshToken,
-                    jwtService.extractExpiration(refreshToken, JwtTokenType.REFRESH),
+                    nextRefreshExpiration(),
                     request
             );
             return;
@@ -313,16 +317,20 @@ public class AccountSettingsSecurityController {
                     verificationResult.account(),
                     currentRefreshToken,
                     refreshToken,
-                    jwtService.extractExpiration(refreshToken, JwtTokenType.REFRESH),
+                    nextRefreshExpiration(),
                     request
             );
         } catch (RuntimeException exception) {
             accountSessionService.createSession(
                     verificationResult.account(),
                     refreshToken,
-                    jwtService.extractExpiration(refreshToken, JwtTokenType.REFRESH),
+                    nextRefreshExpiration(),
                     request
             );
         }
+    }
+
+    private Instant nextRefreshExpiration() {
+        return Instant.now().plus(Duration.ofDays(jwtProperties.getRefreshTokenExpirationDays()));
     }
 }

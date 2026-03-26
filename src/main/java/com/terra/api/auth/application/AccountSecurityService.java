@@ -19,6 +19,7 @@ import com.terra.api.mail.application.AsyncMailService;
 import com.terra.api.mail.application.EmailTemplateService;
 import com.terra.api.mail.domain.EmailMessage;
 import com.terra.api.mail.infrastructure.config.MailProperties;
+import com.terra.api.realtime.application.RealtimeSessionRevocationService;
 import com.terra.api.security.application.AccountSessionService;
 import com.terra.api.security.application.ClientIpResolver;
 import dev.samstevens.totp.code.CodeGenerator;
@@ -70,6 +71,7 @@ public class AccountSecurityService {
     private final AccountTrustedDeviceRepository accountTrustedDeviceRepository;
     private final TwoFactorRecoveryProperties twoFactorRecoveryProperties;
     private final AccountSessionService accountSessionService;
+    private final RealtimeSessionRevocationService realtimeSessionRevocationService;
     private final ClientIpResolver clientIpResolver;
     private final AtomicLong twoFactorRecoveryTechnicalFailureCounter = new AtomicLong();
     private final SecretGenerator secretGenerator = new DefaultSecretGenerator();
@@ -88,6 +90,7 @@ public class AccountSecurityService {
                                   AccountTrustedDeviceRepository accountTrustedDeviceRepository,
                                   TwoFactorRecoveryProperties twoFactorRecoveryProperties,
                                   AccountSessionService accountSessionService,
+                                  RealtimeSessionRevocationService realtimeSessionRevocationService,
                                   ClientIpResolver clientIpResolver) {
         this.authService = authService;
         this.verificationTokenService = verificationTokenService;
@@ -99,6 +102,7 @@ public class AccountSecurityService {
         this.accountTrustedDeviceRepository = accountTrustedDeviceRepository;
         this.twoFactorRecoveryProperties = twoFactorRecoveryProperties;
         this.accountSessionService = accountSessionService;
+        this.realtimeSessionRevocationService = realtimeSessionRevocationService;
         this.clientIpResolver = clientIpResolver;
     }
 
@@ -222,14 +226,7 @@ public class AccountSecurityService {
         );
 
         AccountMaster accountMaster = verification.getAccount();
-        if (!passwordEncoder.matches(request.getCurrentPassword(), accountMaster.getPasswordHash())) {
-            throw new BadRequestException("auth.invalid_credentials");
-        }
-
-        accountMaster.setTwoFactorEnabled(false);
-        accountMaster.setTwoFactorSecret(null);
-        accountMaster.setTwoFactorEnabledAt(null);
-        verification.setUsedAt(Instant.now());
+        applyTwoFactorRecovery(accountMaster, request.getCurrentPassword(), verification);
     }
 
     private void sendTwoFactorRecoveryEmail(AccountMaster accountMaster) {
@@ -265,7 +262,7 @@ public class AccountSecurityService {
         if (!verification.getAccount().getId().equals(authenticated.getId())) {
             throw new BadRequestException("auth.invalid_two_factor_recovery_token");
         }
-        confirmTwoFactorRecovery(request);
+        applyTwoFactorRecovery(authenticated, request.getCurrentPassword(), verification);
     }
 
     @Transactional(readOnly = true)
@@ -332,6 +329,32 @@ public class AccountSecurityService {
                 failureCount,
                 exception
         );
+    }
+
+    private void applyTwoFactorRecovery(AccountMaster accountMaster,
+                                        String currentPassword,
+                                        AccountVerification verification) {
+        if (!passwordEncoder.matches(currentPassword, accountMaster.getPasswordHash())) {
+            throw new BadRequestException("auth.invalid_credentials");
+        }
+
+        accountMaster.setTwoFactorEnabled(false);
+        accountMaster.setTwoFactorSecret(null);
+        accountMaster.setTwoFactorEnabledAt(null);
+        accountMaster.setTwoFactorRecoveryRequestedAt(null);
+        accountMaster.setTokenVersion(accountMaster.getTokenVersion() + 1);
+        verification.setUsedAt(Instant.now());
+        accountSessionService.revokeAllSessions(accountMaster);
+        revokeAllTrustedDevices(accountMaster);
+        revokeRealtimeSessions(accountMaster);
+    }
+
+    private void revokeRealtimeSessions(AccountMaster accountMaster) {
+        try {
+            realtimeSessionRevocationService.revokeAccountSessions(accountMaster.getId(), "two_factor_recovery");
+        } catch (RuntimeException exception) {
+            LOGGER.warn("Realtime session revocation failed for accountId={}", accountMaster.getId(), exception);
+        }
     }
 
     private boolean isCurrentDevice(String currentIp, String currentUserAgent, AccountTrustedDevice device) {
