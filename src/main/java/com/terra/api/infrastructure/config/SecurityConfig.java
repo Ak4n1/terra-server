@@ -121,6 +121,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/account/settings/profile", "/api/account/settings/profile/summary").hasAnyRole("USER", "ADMIN", "SUPER_ADMIN")
                         .requestMatchers("/api/account/settings/avatar/**").hasAnyRole("USER", "ADMIN", "SUPER_ADMIN")
                         .requestMatchers("/api/account/settings/security/**").hasAnyRole("USER", "ADMIN", "SUPER_ADMIN")
+                        .requestMatchers("/api/account/settings/activity").hasAnyRole("USER", "ADMIN", "SUPER_ADMIN")
                         .requestMatchers("/api/game-accounts/**").hasAnyRole("USER", "ADMIN", "SUPER_ADMIN")
                         .requestMatchers("/api/notifications/**").hasAnyRole("USER", "ADMIN", "SUPER_ADMIN")
                         .anyRequest().authenticated())

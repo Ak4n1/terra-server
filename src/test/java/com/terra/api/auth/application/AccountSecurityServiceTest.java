@@ -56,6 +56,7 @@ class AccountSecurityServiceTest {
         AccountSessionService accountSessionService = mock(AccountSessionService.class);
         RealtimeSessionRevocationService realtimeSessionRevocationService = mock(RealtimeSessionRevocationService.class);
         ClientIpResolver clientIpResolver = mock(ClientIpResolver.class);
+        AccountActivityService accountActivityService = mock(AccountActivityService.class);
 
         AccountSecurityService service = new AccountSecurityService(
                 authService,
@@ -69,7 +70,8 @@ class AccountSecurityServiceTest {
                 twoFactorRecoveryProperties,
                 accountSessionService,
                 realtimeSessionRevocationService,
-                clientIpResolver
+                clientIpResolver,
+                accountActivityService
         );
         CodeVerifier codeVerifier = mock(CodeVerifier.class);
         ReflectionTestUtils.setField(service, "codeVerifier", codeVerifier);
@@ -117,6 +119,7 @@ class AccountSecurityServiceTest {
         AccountSessionService accountSessionService = mock(AccountSessionService.class);
         RealtimeSessionRevocationService realtimeSessionRevocationService = mock(RealtimeSessionRevocationService.class);
         ClientIpResolver clientIpResolver = mock(ClientIpResolver.class);
+        AccountActivityService accountActivityService = mock(AccountActivityService.class);
 
         AccountSecurityService service = new AccountSecurityService(
                 authService,
@@ -130,7 +133,8 @@ class AccountSecurityServiceTest {
                 twoFactorRecoveryProperties,
                 accountSessionService,
                 realtimeSessionRevocationService,
-                clientIpResolver
+                clientIpResolver,
+                accountActivityService
         );
         CodeVerifier codeVerifier = mock(CodeVerifier.class);
         ReflectionTestUtils.setField(service, "codeVerifier", codeVerifier);
@@ -176,6 +180,7 @@ class AccountSecurityServiceTest {
         AccountSessionService accountSessionService = mock(AccountSessionService.class);
         RealtimeSessionRevocationService realtimeSessionRevocationService = mock(RealtimeSessionRevocationService.class);
         ClientIpResolver clientIpResolver = mock(ClientIpResolver.class);
+        AccountActivityService accountActivityService = mock(AccountActivityService.class);
 
         AccountSecurityService service = new AccountSecurityService(
                 authService,
@@ -189,7 +194,8 @@ class AccountSecurityServiceTest {
                 twoFactorRecoveryProperties,
                 accountSessionService,
                 realtimeSessionRevocationService,
-                clientIpResolver
+                clientIpResolver,
+                accountActivityService
         );
 
         AccountMaster account = new AccountMaster();
@@ -218,6 +224,7 @@ class AccountSecurityServiceTest {
         AccountSessionService accountSessionService = mock(AccountSessionService.class);
         RealtimeSessionRevocationService realtimeSessionRevocationService = mock(RealtimeSessionRevocationService.class);
         ClientIpResolver clientIpResolver = mock(ClientIpResolver.class);
+        AccountActivityService accountActivityService = mock(AccountActivityService.class);
 
         AccountSecurityService service = new AccountSecurityService(
                 authService,
@@ -231,7 +238,8 @@ class AccountSecurityServiceTest {
                 twoFactorRecoveryProperties,
                 accountSessionService,
                 realtimeSessionRevocationService,
-                clientIpResolver
+                clientIpResolver,
+                accountActivityService
         );
 
         AccountMaster account = new AccountMaster();
@@ -265,6 +273,7 @@ class AccountSecurityServiceTest {
         AccountSessionService accountSessionService = mock(AccountSessionService.class);
         RealtimeSessionRevocationService realtimeSessionRevocationService = mock(RealtimeSessionRevocationService.class);
         ClientIpResolver clientIpResolver = mock(ClientIpResolver.class);
+        AccountActivityService accountActivityService = mock(AccountActivityService.class);
 
         AccountSecurityService service = new AccountSecurityService(
                 authService,
@@ -278,7 +287,8 @@ class AccountSecurityServiceTest {
                 twoFactorRecoveryProperties,
                 accountSessionService,
                 realtimeSessionRevocationService,
-                clientIpResolver
+                clientIpResolver,
+                accountActivityService
         );
 
         when(authService.getCurrentUserAccount("missing@l2terra.online"))
@@ -302,6 +312,7 @@ class AccountSecurityServiceTest {
         AccountSessionService accountSessionService = mock(AccountSessionService.class);
         RealtimeSessionRevocationService realtimeSessionRevocationService = mock(RealtimeSessionRevocationService.class);
         ClientIpResolver clientIpResolver = mock(ClientIpResolver.class);
+        AccountActivityService accountActivityService = mock(AccountActivityService.class);
 
         AccountSecurityService service = new AccountSecurityService(
                 authService,
@@ -315,7 +326,8 @@ class AccountSecurityServiceTest {
                 twoFactorRecoveryProperties,
                 accountSessionService,
                 realtimeSessionRevocationService,
-                clientIpResolver
+                clientIpResolver,
+                accountActivityService
         );
 
         when(authService.getCurrentUserAccount("player@l2terra.online"))
@@ -339,6 +351,7 @@ class AccountSecurityServiceTest {
         AccountSessionService accountSessionService = mock(AccountSessionService.class);
         RealtimeSessionRevocationService realtimeSessionRevocationService = mock(RealtimeSessionRevocationService.class);
         ClientIpResolver clientIpResolver = mock(ClientIpResolver.class);
+        AccountActivityService accountActivityService = mock(AccountActivityService.class);
 
         AccountSecurityService service = new AccountSecurityService(
                 authService,
@@ -352,7 +365,8 @@ class AccountSecurityServiceTest {
                 twoFactorRecoveryProperties,
                 accountSessionService,
                 realtimeSessionRevocationService,
-                clientIpResolver
+                clientIpResolver,
+                accountActivityService
         );
 
         AccountMaster account = new AccountMaster();

@@ -1,6 +1,8 @@
 package com.terra.api.game.accounts.application;
 
 import com.terra.api.auth.domain.model.AccountMaster;
+import com.terra.api.auth.application.AccountActivityEventKey;
+import com.terra.api.auth.application.AccountActivityService;
 import com.terra.api.auth.infrastructure.persistence.AccountMasterRepository;
 import com.terra.api.common.domain.exception.BadRequestException;
 import com.terra.api.common.domain.exception.ForbiddenException;
@@ -29,6 +31,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -47,6 +50,7 @@ public class GameAccountCreationService {
     private final GameAccountPasswordService gameAccountPasswordService;
     private final GameAccountEmailTemplateService gameAccountEmailTemplateService;
     private final EmailActionCooldownService emailActionCooldownService;
+    private final AccountActivityService accountActivityService;
 
     public GameAccountCreationService(AccountMasterRepository accountMasterRepository,
                                       GameAccountCreationCodeRepository creationCodeRepository,
@@ -54,7 +58,8 @@ public class GameAccountCreationService {
                                       GameAccountValidationService validationService,
                                       GameAccountPasswordService gameAccountPasswordService,
                                       GameAccountEmailTemplateService gameAccountEmailTemplateService,
-                                      EmailActionCooldownService emailActionCooldownService) {
+                                      EmailActionCooldownService emailActionCooldownService,
+                                      AccountActivityService accountActivityService) {
         this.accountMasterRepository = accountMasterRepository;
         this.creationCodeRepository = creationCodeRepository;
         this.gameAccountsGateway = gameAccountsGateway;
@@ -62,6 +67,7 @@ public class GameAccountCreationService {
         this.gameAccountPasswordService = gameAccountPasswordService;
         this.gameAccountEmailTemplateService = gameAccountEmailTemplateService;
         this.emailActionCooldownService = emailActionCooldownService;
+        this.accountActivityService = accountActivityService;
     }
 
     @Transactional
@@ -168,6 +174,11 @@ public class GameAccountCreationService {
 
         entity.setConsumedAt(now);
         creationCodeRepository.save(entity);
+        accountActivityService.log(
+                accountMaster,
+                AccountActivityEventKey.GAME_ACCOUNT_CREATED,
+                Map.of("accountName", normalizedLogin)
+        );
         return new CreateGameAccountResponse(normalizedLogin, normalizeEmail(accountMaster.getEmail()), now);
     }
 

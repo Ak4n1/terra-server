@@ -41,6 +41,7 @@ import java.security.SecureRandom;
 import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.Set;
+import java.util.Map;
 import java.time.Instant;
 import java.time.Duration;
 import java.time.ZoneId;
@@ -70,6 +71,7 @@ public class AuthServiceImpl implements AuthService {
     private final ProfileSettingsProperties profileSettingsProperties;
     private final AccountTrustedDeviceRepository accountTrustedDeviceRepository;
     private final ClientIpResolver clientIpResolver;
+    private final AccountActivityService accountActivityService;
     private final CodeGenerator totpCodeGenerator = new DefaultCodeGenerator();
     private final CodeVerifier totpCodeVerifier = new DefaultCodeVerifier(totpCodeGenerator, new SystemTimeProvider());
     private final SecureRandom secureRandom = new SecureRandom();
@@ -87,7 +89,8 @@ public class AuthServiceImpl implements AuthService {
             CurrentLanguageResolver currentLanguageResolver,
             ProfileSettingsProperties profileSettingsProperties,
             AccountTrustedDeviceRepository accountTrustedDeviceRepository,
-            ClientIpResolver clientIpResolver) {
+            ClientIpResolver clientIpResolver,
+            AccountActivityService accountActivityService) {
         this.accountMasterRepository = accountMasterRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
@@ -100,6 +103,7 @@ public class AuthServiceImpl implements AuthService {
         this.profileSettingsProperties = profileSettingsProperties;
         this.accountTrustedDeviceRepository = accountTrustedDeviceRepository;
         this.clientIpResolver = clientIpResolver;
+        this.accountActivityService = accountActivityService;
     }
 
     @Override
@@ -165,6 +169,7 @@ public class AuthServiceImpl implements AuthService {
 
         accountMaster.setLastLoginAt(Instant.now());
         accountMasterRepository.save(accountMaster);
+        accountActivityService.log(accountMaster, AccountActivityEventKey.AUTH_LOGIN_SUCCESS, Map.of());
         return new AuthLoginResult(accountMaster, trustedDeviceKeyToSet);
     }
 

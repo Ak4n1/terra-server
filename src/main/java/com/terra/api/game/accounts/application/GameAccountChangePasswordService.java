@@ -1,6 +1,8 @@
 package com.terra.api.game.accounts.application;
 
 import com.terra.api.auth.domain.model.AccountMaster;
+import com.terra.api.auth.application.AccountActivityEventKey;
+import com.terra.api.auth.application.AccountActivityService;
 import com.terra.api.auth.infrastructure.persistence.AccountMasterRepository;
 import com.terra.api.common.domain.exception.BadRequestException;
 import com.terra.api.common.domain.exception.ForbiddenException;
@@ -25,6 +27,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -43,6 +46,7 @@ public class GameAccountChangePasswordService {
     private final GameAccountEmailTemplateService gameAccountEmailTemplateService;
     private final EmailActionCooldownService emailActionCooldownService;
     private final GameAccountPasswordChangeCodeRepository passwordChangeCodeRepository;
+    private final AccountActivityService accountActivityService;
 
     public GameAccountChangePasswordService(AccountMasterRepository accountMasterRepository,
                                             GameAccountsGateway gameAccountsGateway,
@@ -50,7 +54,8 @@ public class GameAccountChangePasswordService {
                                             GameAccountPasswordService gameAccountPasswordService,
                                             GameAccountEmailTemplateService gameAccountEmailTemplateService,
                                             EmailActionCooldownService emailActionCooldownService,
-                                            GameAccountPasswordChangeCodeRepository passwordChangeCodeRepository) {
+                                            GameAccountPasswordChangeCodeRepository passwordChangeCodeRepository,
+                                            AccountActivityService accountActivityService) {
         this.accountMasterRepository = accountMasterRepository;
         this.gameAccountsGateway = gameAccountsGateway;
         this.validationService = validationService;
@@ -58,6 +63,7 @@ public class GameAccountChangePasswordService {
         this.gameAccountEmailTemplateService = gameAccountEmailTemplateService;
         this.emailActionCooldownService = emailActionCooldownService;
         this.passwordChangeCodeRepository = passwordChangeCodeRepository;
+        this.accountActivityService = accountActivityService;
     }
 
     @Transactional(readOnly = true)
@@ -196,6 +202,11 @@ public class GameAccountChangePasswordService {
 
         entity.setConsumedAt(now);
         passwordChangeCodeRepository.save(entity);
+        accountActivityService.log(
+                accountMaster,
+                AccountActivityEventKey.GAME_ACCOUNT_PASSWORD_CHANGED,
+                Map.of("accountName", accountName)
+        );
     }
 
     private void requireOwnedAccount(String accountName, String email) {

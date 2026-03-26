@@ -1,0 +1,27 @@
+services:
+  terra-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: terra-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      SERVER_PORT: 8080
+      DB_HOST: ${DB_HOST_DOCKER:-l2-mariadb}
+      DB_PORT: ${DB_PORT_DOCKER:-3306}
+      DB_NAME: ${DB_NAME:-l2jmobiusclassic}
+      DB_USERNAME: ${DB_USERNAME:-l2terra}
+      DB_PASSWORD: ${DB_PASSWORD:-}
+    ports:
+      - "${API_HOST_PORT:-8080}:8080"
+    volumes:
+      - ./uploads:/app/uploads
+    networks:
+      - mariadb_docker_net
+
+networks:
+  mariadb_docker_net:
+    external: true
+    name: ${MARIADB_DOCKER_NETWORK:-mariadb-docker_default}

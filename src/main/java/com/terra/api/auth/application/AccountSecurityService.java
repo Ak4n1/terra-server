@@ -50,6 +50,7 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -73,6 +74,7 @@ public class AccountSecurityService {
     private final AccountSessionService accountSessionService;
     private final RealtimeSessionRevocationService realtimeSessionRevocationService;
     private final ClientIpResolver clientIpResolver;
+    private final AccountActivityService accountActivityService;
     private final AtomicLong twoFactorRecoveryTechnicalFailureCounter = new AtomicLong();
     private final SecretGenerator secretGenerator = new DefaultSecretGenerator();
     private final CodeGenerator codeGenerator = new DefaultCodeGenerator();
@@ -91,7 +93,8 @@ public class AccountSecurityService {
                                   TwoFactorRecoveryProperties twoFactorRecoveryProperties,
                                   AccountSessionService accountSessionService,
                                   RealtimeSessionRevocationService realtimeSessionRevocationService,
-                                  ClientIpResolver clientIpResolver) {
+                                  ClientIpResolver clientIpResolver,
+                                  AccountActivityService accountActivityService) {
         this.authService = authService;
         this.verificationTokenService = verificationTokenService;
         this.emailTemplateService = emailTemplateService;
@@ -104,6 +107,7 @@ public class AccountSecurityService {
         this.accountSessionService = accountSessionService;
         this.realtimeSessionRevocationService = realtimeSessionRevocationService;
         this.clientIpResolver = clientIpResolver;
+        this.accountActivityService = accountActivityService;
     }
 
     @Transactional(readOnly = true)
@@ -180,6 +184,7 @@ public class AccountSecurityService {
         revokeAllTrustedDevices(accountMaster);
 
         upsertTrustedDevice(accountMaster, keyToSet, httpServletRequest);
+        accountActivityService.log(accountMaster, AccountActivityEventKey.AUTH_TWO_FACTOR_ENABLED, Map.of());
         return new TwoFactorSetupVerificationResult(accountMaster, keyToSet);
     }
 
@@ -346,6 +351,7 @@ public class AccountSecurityService {
         verification.setUsedAt(Instant.now());
         accountSessionService.revokeAllSessions(accountMaster);
         revokeAllTrustedDevices(accountMaster);
+        accountActivityService.log(accountMaster, AccountActivityEventKey.AUTH_TWO_FACTOR_DISABLED, Map.of());
         revokeRealtimeSessions(accountMaster);
     }
 
