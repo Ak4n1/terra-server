@@ -7,5 +7,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AccountActivityEventRepository extends JpaRepository<AccountActivityEvent, Long> {
 
-    Page<AccountActivityEvent> findByAccount_IdOrderByOccurredAtDesc(Long accountId, Pageable pageable);
+    Page<AccountActivityEvent> findByAccount_Id(Long accountId, Pageable pageable);
 }

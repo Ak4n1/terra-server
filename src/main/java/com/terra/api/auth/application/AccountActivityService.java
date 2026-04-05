@@ -12,6 +12,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
@@ -24,6 +25,7 @@ import java.util.Map;
 public class AccountActivityService {
     private static final int DEFAULT_SIZE = 10;
     private static final int MAX_SIZE = 50;
+    private static final Sort.Direction DEFAULT_SORT_DIRECTION = Sort.Direction.DESC;
 
     private final AccountActivityEventRepository accountActivityEventRepository;
     private final AccountMasterRepository accountMasterRepository;
@@ -64,15 +66,16 @@ public class AccountActivityService {
     }
 
     @Transactional(readOnly = true)
-    public AccountActivityListResponse list(String email, Integer requestedPage, Integer requestedSize) {
+    public AccountActivityListResponse list(String email, Integer requestedPage, Integer requestedSize, String requestedSort) {
         AccountMaster accountMaster = accountMasterRepository.findByEmailIgnoreCase(normalizeEmail(email))
                 .orElseThrow(() -> new ResourceNotFoundException("auth.user_not_found"));
 
         int page = normalizePage(requestedPage);
         int size = normalizeSize(requestedSize);
-        Page<AccountActivityEvent> result = accountActivityEventRepository.findByAccount_IdOrderByOccurredAtDesc(
+        Sort.Direction sortDirection = normalizeSortDirection(requestedSort);
+        Page<AccountActivityEvent> result = accountActivityEventRepository.findByAccount_Id(
                 accountMaster.getId(),
-                PageRequest.of(page, size)
+                PageRequest.of(page, size, Sort.by(sortDirection, "occurredAt", "id"))
         );
 
         return new AccountActivityListResponse(
@@ -105,6 +108,22 @@ public class AccountActivityService {
             return DEFAULT_SIZE;
         }
         return Math.max(1, Math.min(requestedSize, MAX_SIZE));
+    }
+
+    private Sort.Direction normalizeSortDirection(String requestedSort) {
+        if (requestedSort == null || requestedSort.isBlank()) {
+            return DEFAULT_SORT_DIRECTION;
+        }
+
+        String normalized = requestedSort.trim().toLowerCase(Locale.ROOT);
+        if ("asc".equals(normalized)) {
+            return Sort.Direction.ASC;
+        }
+        if ("desc".equals(normalized)) {
+            return Sort.Direction.DESC;
+        }
+
+        return DEFAULT_SORT_DIRECTION;
     }
 
     private String normalizeEmail(String email) {

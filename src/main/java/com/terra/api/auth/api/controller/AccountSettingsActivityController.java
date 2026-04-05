@@ -27,8 +27,9 @@ public class AccountSettingsActivityController {
     @GetMapping
     public ResponseEntity<ApiResponse<AccountActivityListResponse>> list(Authentication authentication,
                                                                          @RequestParam(name = "page", required = false) Integer page,
-                                                                         @RequestParam(name = "size", required = false) Integer size) {
-        AccountActivityListResponse response = accountActivityService.list(authentication.getName(), page, size);
+                                                                         @RequestParam(name = "size", required = false) Integer size,
+                                                                         @RequestParam(name = "sort", required = false) String sort) {
+        AccountActivityListResponse response = accountActivityService.list(authentication.getName(), page, size, sort);
         return ResponseEntity.ok(ApiResponse.of(
                 "auth.activity_loaded",
                 messageResolver.get("auth.activity_loaded"),
