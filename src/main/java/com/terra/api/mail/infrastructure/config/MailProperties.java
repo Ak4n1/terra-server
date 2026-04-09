@@ -12,6 +12,7 @@ public class MailProperties {
     private String frontendTwoFactorRecoveryUrl;
     private String frontendGameAccountsUrl;
     private String frontendSecurityUrl;
+    private String frontendAuthUrl;
     private long verificationEmailCooldownSeconds = 60L;
     private long passwordResetCooldownSeconds = 60L;
 
@@ -69,6 +70,14 @@ public class MailProperties {
 
     public void setFrontendSecurityUrl(String frontendSecurityUrl) {
         this.frontendSecurityUrl = frontendSecurityUrl;
+    }
+
+    public String getFrontendAuthUrl() {
+        return frontendAuthUrl;
+    }
+
+    public void setFrontendAuthUrl(String frontendAuthUrl) {
+        this.frontendAuthUrl = frontendAuthUrl;
     }
 
     public long getVerificationEmailCooldownSeconds() {

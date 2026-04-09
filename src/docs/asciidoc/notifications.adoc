@@ -4,7 +4,7 @@ Este modulo expone el inbox del usuario, operaciones de lectura y herramientas a
 
 === GET `/api/notifications`
 
-Lista notificaciones del usuario autenticado con paginacion y filtro opcional de no leidas.
+Lista notificaciones del usuario autenticado con paginacion y filtros opcionales por estado, orden y rango de fechas.
 
 operation::notifications/list[snippets='http-request,request-cookies,query-parameters,http-response']
 

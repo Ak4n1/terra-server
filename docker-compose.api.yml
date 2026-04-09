@@ -6,7 +6,7 @@ services:
     container_name: terra-api
     restart: unless-stopped
     env_file:
-      - .env
+      - .env.dev
     environment:
       SERVER_PORT: 8080
       DB_HOST: ${DB_HOST_DOCKER:-l2-mariadb}

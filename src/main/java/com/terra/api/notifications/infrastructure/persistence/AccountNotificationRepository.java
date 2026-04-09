@@ -29,6 +29,28 @@ public interface AccountNotificationRepository extends JpaRepository<AccountNoti
     @Query(value = """
             select notification
               from AccountNotification notification
+             where notification.account.id = :accountId
+               and (:status is null or notification.status = :status)
+               and (:occurredFrom is null or notification.occurredAt >= :occurredFrom)
+               and (:occurredTo is null or notification.occurredAt < :occurredTo)
+            """,
+            countQuery = """
+            select count(notification)
+              from AccountNotification notification
+             where notification.account.id = :accountId
+               and (:status is null or notification.status = :status)
+               and (:occurredFrom is null or notification.occurredAt >= :occurredFrom)
+               and (:occurredTo is null or notification.occurredAt < :occurredTo)
+            """)
+    Page<AccountNotification> findUserEntries(@Param("accountId") Long accountId,
+                                              @Param("status") NotificationStatus status,
+                                              @Param("occurredFrom") Instant occurredFrom,
+                                              @Param("occurredTo") Instant occurredTo,
+                                              Pageable pageable);
+
+    @Query(value = """
+            select notification
+              from AccountNotification notification
              where notification.type in :types
                and (:template is null or notification.type = :template)
                and (:status is null or notification.status = :status)

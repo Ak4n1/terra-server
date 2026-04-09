@@ -45,6 +45,13 @@ public class AccountMaster {
     private String passwordHash;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "auth_provider", nullable = false, length = 16)
+    private AuthProvider authProvider = AuthProvider.LOCAL;
+
+    @Column(name = "provider_subject", unique = true, length = 255)
+    private String providerSubject;
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "avatar_type", length = 16)
     private AccountAvatarType avatarType = AccountAvatarType.DEFAULT;
 
@@ -62,6 +69,9 @@ public class AccountMaster {
 
     @Column(name = "email_verified", nullable = false)
     private boolean emailVerified;
+
+    @Column(name = "email_verified_at")
+    private Instant emailVerifiedAt;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -109,6 +119,9 @@ public class AccountMaster {
         if (avatarType == null) {
             avatarType = AccountAvatarType.DEFAULT;
         }
+        if (authProvider == null) {
+            authProvider = AuthProvider.LOCAL;
+        }
     }
 
     public Long getId() {
@@ -155,6 +168,22 @@ public class AccountMaster {
         this.passwordHash = passwordHash;
     }
 
+    public AuthProvider getAuthProvider() {
+        return authProvider;
+    }
+
+    public void setAuthProvider(AuthProvider authProvider) {
+        this.authProvider = authProvider;
+    }
+
+    public String getProviderSubject() {
+        return providerSubject;
+    }
+
+    public void setProviderSubject(String providerSubject) {
+        this.providerSubject = providerSubject;
+    }
+
     public boolean isEnabled() {
         return enabled;
     }
@@ -169,6 +198,19 @@ public class AccountMaster {
 
     public void setEmailVerified(boolean emailVerified) {
         this.emailVerified = emailVerified;
+    }
+
+    public Instant getEmailVerifiedAt() {
+        return emailVerifiedAt;
+    }
+
+    public void setEmailVerifiedAt(Instant emailVerifiedAt) {
+        this.emailVerifiedAt = emailVerifiedAt;
+    }
+
+    public void markEmailVerified(Instant verifiedAt) {
+        this.emailVerified = true;
+        this.emailVerifiedAt = verifiedAt;
     }
 
     public Instant getCreatedAt() {

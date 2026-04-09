@@ -2,6 +2,7 @@ package com.terra.api.infrastructure.config;
 
 import com.terra.api.auth.infrastructure.security.AccountMasterDetailsService;
 import com.terra.api.auth.infrastructure.persistence.AccountMasterRepository;
+import com.terra.api.auth.infrastructure.config.FirebaseProperties;
 import com.terra.api.security.infrastructure.config.CsrfProperties;
 import com.terra.api.security.infrastructure.config.JwtProperties;
 import com.terra.api.security.infrastructure.config.RateLimitProperties;
@@ -30,7 +31,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 
 @Configuration
-@EnableConfigurationProperties({JwtProperties.class, CorsProperties.class, CsrfProperties.class, RateLimitProperties.class, MailProperties.class, SecurityNetworkProperties.class})
+@EnableConfigurationProperties({JwtProperties.class, CorsProperties.class, CsrfProperties.class, RateLimitProperties.class, MailProperties.class, SecurityNetworkProperties.class, FirebaseProperties.class})
 public class SecurityConfig {
 
     private final JsonAuthenticationEntryPoint authenticationEntryPoint;
@@ -105,6 +106,10 @@ public class SecurityConfig {
                                 "/api/auth/config",
                                 "/api/auth/register",
                                 "/api/auth/login",
+                                "/api/auth/oauth/google",
+                                "/api/auth/oauth/google/start",
+                                "/api/auth/oauth/google/verify-email-code",
+                                "/api/auth/oauth/google/resend-email-code",
                                 "/api/auth/verify-email",
                                 "/api/auth/resend-verification",
                                 "/api/auth/forgot-password",

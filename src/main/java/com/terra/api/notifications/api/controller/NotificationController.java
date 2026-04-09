@@ -11,12 +11,15 @@ import com.terra.api.notifications.application.NotificationCommandService;
 import com.terra.api.notifications.application.NotificationQueryService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/notifications")
@@ -41,9 +44,22 @@ public class NotificationController {
     public ResponseEntity<ApiResponse<NotificationListResponse>> list(Authentication authentication,
                                                                       @RequestParam(name = "limit", required = false) Integer limit,
                                                                       @RequestParam(name = "page", required = false) Integer page,
-                                                                      @RequestParam(name = "unreadOnly", required = false) Boolean unreadOnly) {
+                                                                      @RequestParam(name = "unreadOnly", required = false) Boolean unreadOnly,
+                                                                      @RequestParam(name = "status", required = false) String status,
+                                                                      @RequestParam(name = "sort", required = false) String sort,
+                                                                      @RequestParam(name = "dateFrom", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+                                                                      @RequestParam(name = "dateTo", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
         AccountMaster account = authService.getCurrentUserAccount(authentication.getName());
-        NotificationListResponse response = notificationQueryService.listLatest(account.getId(), limit, page, unreadOnly);
+        NotificationListResponse response = notificationQueryService.listLatest(
+                account.getId(),
+                limit,
+                page,
+                unreadOnly,
+                status,
+                sort,
+                dateFrom,
+                dateTo
+        );
         return ResponseEntity.ok(ApiResponse.of(
                 "notifications.list_success",
                 messageResolver.get("notifications.list_success"),
