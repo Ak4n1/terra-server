@@ -31,7 +31,9 @@ import java.util.regex.Pattern;
 
 @Service
 public class AccountAvatarServiceImpl implements AccountAvatarService {
-    private static final Pattern PRESET_PATH_PATTERN = Pattern.compile("^assets/images/app/avatars/(Lineage|Elemental)/[A-Za-z0-9_.-]+\\.(png|jpg|jpeg|webp)$");
+    private static final Pattern PRESET_PATH_PATTERN = Pattern.compile(
+            "^assets/images/app/avatars/(Lineage|Elemental)/(?:[A-Za-z0-9_-]+/)?[A-Za-z0-9_.-]+\\.(png|jpg|jpeg|webp)$"
+    );
     private static final Set<String> ALLOWED_MIME_TYPES = Set.of("image/png", "image/jpeg", "image/webp");
     private static final int MIN_IMAGE_SIZE = 64;
     private static final int MAX_IMAGE_SIZE = 4096;
