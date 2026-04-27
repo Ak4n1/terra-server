@@ -51,6 +51,8 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+firebase-adminsdk-*.json
+*firebase*service*account*.json
 
 ### Local docs ###
 NGINX_SECURITY_HEADERS_PLAN.md

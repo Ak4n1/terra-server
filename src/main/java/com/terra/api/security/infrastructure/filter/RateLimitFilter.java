@@ -84,6 +84,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         if ("/api/auth/login".equals(path)
                 || "/api/auth/register".equals(path)
+                || "/api/auth/oauth/google".equals(path)
+                || "/api/auth/oauth/google/start".equals(path)
+                || "/api/auth/oauth/google/verify-email-code".equals(path)
+                || "/api/auth/oauth/google/resend-email-code".equals(path)
                 || "/api/auth/resend-verification".equals(path)
                 || "/api/auth/forgot-password".equals(path)
                 || "/api/auth/verify-email".equals(path)

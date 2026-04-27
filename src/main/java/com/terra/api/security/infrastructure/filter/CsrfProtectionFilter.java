@@ -23,7 +23,14 @@ import java.util.Set;
 public class CsrfProtectionFilter extends OncePerRequestFilter {
 
     private static final Set<String> SAFE_METHODS = Set.of("GET", "HEAD", "OPTIONS");
-    private static final Set<String> EXCLUDED_PATHS = Set.of("/api/auth/login", "/api/auth/register");
+    private static final Set<String> EXCLUDED_PATHS = Set.of(
+            "/api/auth/login",
+            "/api/auth/register",
+            "/api/auth/oauth/google",
+            "/api/auth/oauth/google/start",
+            "/api/auth/oauth/google/verify-email-code",
+            "/api/auth/oauth/google/resend-email-code"
+    );
 
     private final CsrfProperties csrfProperties;
     private final JwtProperties jwtProperties;

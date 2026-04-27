@@ -17,6 +17,8 @@ Ruta del proyecto:
 
 ## Build y run local
 
+Usa variables desde `.env.dev`.
+
 ```bash
 docker compose -f docker-compose.api.yml build terra-api
 docker compose -f docker-compose.api.yml up -d terra-api

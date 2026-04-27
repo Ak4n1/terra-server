@@ -51,7 +51,7 @@ class AccountActivityServiceTest {
         when(accountActivityEventRepository.findByAccount_Id(eq(10L), any(Pageable.class)))
                 .thenAnswer(invocation -> new PageImpl<AccountActivityEvent>(List.of(), invocation.getArgument(1), 0));
 
-        service.list(" Player@L2Terra.Online ", null, null, null);
+        service.list(" Player@L2Terra.Online ", null, null, null, null, null);
 
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
         verify(accountActivityEventRepository).findByAccount_Id(eq(10L), pageableCaptor.capture());
@@ -87,7 +87,7 @@ class AccountActivityServiceTest {
         when(accountActivityEventRepository.findByAccount_Id(eq(24L), any(Pageable.class)))
                 .thenAnswer(invocation -> new PageImpl<AccountActivityEvent>(List.of(), invocation.getArgument(1), 0));
 
-        service.list("player@l2terra.online", 2, 5, "asc");
+        service.list("player@l2terra.online", 2, 5, "asc", null, null);
 
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
         verify(accountActivityEventRepository).findByAccount_Id(eq(24L), pageableCaptor.capture());

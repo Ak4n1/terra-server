@@ -26,6 +26,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import jakarta.servlet.http.Cookie;
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 
@@ -168,6 +169,33 @@ class NotificationIntegrationTest {
                 .andExpect(jsonPath("$.data.hasMore").value(false))
                 .andExpect(jsonPath("$.data.page").value(1))
                 .andExpect(jsonPath("$.data.size").value(3));
+    }
+
+    @Test
+    void shouldFilterNotificationsByStatusDateRangeAndSort() throws Exception {
+        AccountMaster account = createVerifiedUser("notify-filter@l2terra.online");
+        notificationCommandService.createTestNotification(account);
+        notificationCommandService.createTestNotification(account);
+
+        List<AccountNotification> notifications = accountNotificationRepository.findAll();
+        AccountNotification first = notifications.get(0);
+        AccountNotification second = notifications.get(1);
+
+        first.setOccurredAt(Instant.parse("2026-01-11T10:15:00Z"));
+        first.markRead();
+        second.setOccurredAt(Instant.parse("2026-01-09T08:00:00Z"));
+        accountNotificationRepository.saveAll(List.of(first, second));
+
+        SessionCookies cookies = login("notify-filter@l2terra.online");
+
+        mockMvc.perform(get("/api/notifications?limit=10&page=0&status=READ&sort=asc&dateFrom=2026-01-01&dateTo=2026-01-31")
+                        .cookie(cookies.accessCookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].status").value("READ"))
+                .andExpect(jsonPath("$.data.items[0].occurredAt").value("2026-01-11T10:15:00Z"))
+                .andExpect(jsonPath("$.data.unreadCount").value(1))
+                .andExpect(jsonPath("$.data.hasMore").value(false));
     }
 
     // Verifica que mark-read cambie el estado a READ y siga siendo idempotente cuando se ejecuta mas de una vez.

@@ -15,6 +15,7 @@ public class EmailTemplateService {
     private static final String TWO_FACTOR_RECOVERY_MODULE = "mail/two-factor-recovery";
     private static final String GAME_ACCOUNT_CREATE_MODULE = "mail/game-account-create";
     private static final String GAME_ACCOUNT_CHANGE_PASSWORD_MODULE = "mail/game-account-change-password";
+    private static final String OAUTH_GOOGLE_EMAIL_CODE_MODULE = "mail/oauth-google-email-code";
 
     private final MessageResolver messageResolver;
 
@@ -142,6 +143,42 @@ public class EmailTemplateService {
                 messageResolver.getFromModule(GAME_ACCOUNT_CREATE_MODULE, "mail.common.signature_closing", language),
                 messageResolver.getFromModule(GAME_ACCOUNT_CREATE_MODULE, "mail.common.signature_name", language),
                 messageResolver.getFromModule(GAME_ACCOUNT_CREATE_MODULE, "mail.game_account_create.footer", language)
+        );
+        return new EmailMessage(subject, htmlBody);
+    }
+
+    public EmailMessage buildOAuthGoogleEmailCodeMessage(String email,
+                                                         String code,
+                                                         String authUrl,
+                                                         SupportedLanguage language,
+                                                         long expirationMinutes) {
+        String title = messageResolver.getFromModule(
+                OAUTH_GOOGLE_EMAIL_CODE_MODULE,
+                "mail.oauth_google_email_code.subject",
+                language
+        );
+        String subject = buildSubject(
+                OAUTH_GOOGLE_EMAIL_CODE_MODULE,
+                "mail.oauth_google_email_code.subject_label",
+                language
+        );
+        String htmlBody = buildGameAccountCreateLayout(
+                messageResolver.getFromModule(OAUTH_GOOGLE_EMAIL_CODE_MODULE, "mail.oauth_google_email_code.eyebrow", language),
+                title,
+                messageResolver.getFromModule(OAUTH_GOOGLE_EMAIL_CODE_MODULE, "mail.oauth_google_email_code.greeting", language),
+                email,
+                messageResolver.getFromModule(OAUTH_GOOGLE_EMAIL_CODE_MODULE, "mail.oauth_google_email_code.body", language),
+                null,
+                null,
+                code,
+                messageResolver.getFromModule(OAUTH_GOOGLE_EMAIL_CODE_MODULE, "mail.oauth_google_email_code.cta", language),
+                authUrl,
+                messageResolver.getFromModule(OAUTH_GOOGLE_EMAIL_CODE_MODULE, "mail.oauth_google_email_code.expiry", language, expirationMinutes),
+                messageResolver.getFromModule(OAUTH_GOOGLE_EMAIL_CODE_MODULE, "mail.oauth_google_email_code.ignore", language),
+                messageResolver.getFromModule(OAUTH_GOOGLE_EMAIL_CODE_MODULE, "mail.common.link_fallback", language),
+                messageResolver.getFromModule(OAUTH_GOOGLE_EMAIL_CODE_MODULE, "mail.common.signature_closing", language),
+                messageResolver.getFromModule(OAUTH_GOOGLE_EMAIL_CODE_MODULE, "mail.common.signature_name", language),
+                messageResolver.getFromModule(OAUTH_GOOGLE_EMAIL_CODE_MODULE, "mail.oauth_google_email_code.footer", language)
         );
         return new EmailMessage(subject, htmlBody);
     }

@@ -11,6 +11,7 @@ import com.terra.api.security.application.ClientIpResolver;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,9 @@ import tools.jackson.databind.ObjectMapper;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 
 @Service
 public class AccountActivityService {
@@ -66,17 +70,45 @@ public class AccountActivityService {
     }
 
     @Transactional(readOnly = true)
-    public AccountActivityListResponse list(String email, Integer requestedPage, Integer requestedSize, String requestedSort) {
+    public AccountActivityListResponse list(String email,
+                                            Integer requestedPage,
+                                            Integer requestedSize,
+                                            String requestedSort,
+                                            LocalDate dateFrom,
+                                            LocalDate dateTo) {
         AccountMaster accountMaster = accountMasterRepository.findByEmailIgnoreCase(normalizeEmail(email))
                 .orElseThrow(() -> new ResourceNotFoundException("auth.user_not_found"));
 
         int page = normalizePage(requestedPage);
         int size = normalizeSize(requestedSize);
         Sort.Direction sortDirection = normalizeSortDirection(requestedSort);
-        Page<AccountActivityEvent> result = accountActivityEventRepository.findByAccount_Id(
-                accountMaster.getId(),
-                PageRequest.of(page, size, Sort.by(sortDirection, "occurredAt", "id"))
-        );
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, "occurredAt", "id"));
+        Instant occurredFrom = toOccurredFrom(dateFrom);
+        Instant occurredToExclusive = toOccurredToExclusive(dateTo);
+
+        Page<AccountActivityEvent> result;
+        if (occurredFrom != null && occurredToExclusive != null) {
+            result = accountActivityEventRepository.findByAccount_IdAndOccurredAtGreaterThanEqualAndOccurredAtLessThan(
+                    accountMaster.getId(),
+                    occurredFrom,
+                    occurredToExclusive,
+                    pageable
+            );
+        } else if (occurredFrom != null) {
+            result = accountActivityEventRepository.findByAccount_IdAndOccurredAtGreaterThanEqual(
+                    accountMaster.getId(),
+                    occurredFrom,
+                    pageable
+            );
+        } else if (occurredToExclusive != null) {
+            result = accountActivityEventRepository.findByAccount_IdAndOccurredAtLessThan(
+                    accountMaster.getId(),
+                    occurredToExclusive,
+                    pageable
+            );
+        } else {
+            result = accountActivityEventRepository.findByAccount_Id(accountMaster.getId(), pageable);
+        }
 
         return new AccountActivityListResponse(
                 result.getContent().stream().map(this::toResponse).toList(),
@@ -128,6 +160,20 @@ public class AccountActivityService {
 
     private String normalizeEmail(String email) {
         return email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private Instant toOccurredFrom(LocalDate dateFrom) {
+        if (dateFrom == null) {
+            return null;
+        }
+        return dateFrom.atStartOfDay(ZoneOffset.UTC).toInstant();
+    }
+
+    private Instant toOccurredToExclusive(LocalDate dateTo) {
+        if (dateTo == null) {
+            return null;
+        }
+        return dateTo.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
     }
 
     private String resolveUserAgent(HttpServletRequest request) {

@@ -6,6 +6,11 @@ import com.terra.api.auth.application.AuthLoginResult;
 import com.terra.api.auth.api.dto.ConfirmTwoFactorRecoveryRequest;
 import com.terra.api.auth.api.dto.ForgotPasswordRequest;
 import com.terra.api.auth.api.dto.LoginRequest;
+import com.terra.api.auth.api.dto.OAuthGoogleEmailCodeChallengeResponse;
+import com.terra.api.auth.api.dto.OAuthGoogleRequest;
+import com.terra.api.auth.api.dto.OAuthGoogleResendEmailCodeRequest;
+import com.terra.api.auth.api.dto.OAuthGoogleStartResponse;
+import com.terra.api.auth.api.dto.OAuthGoogleVerifyEmailCodeRequest;
 import com.terra.api.auth.api.dto.ResendVerificationRequest;
 import com.terra.api.auth.api.dto.RefreshSessionResponse;
 import com.terra.api.auth.api.dto.RegisterRequest;
@@ -19,6 +24,7 @@ import com.terra.api.auth.domain.model.AccountSession;
 import com.terra.api.auth.application.AuthService;
 import com.terra.api.auth.application.AccountSecurityService;
 import com.terra.api.auth.application.EmailVerificationService;
+import com.terra.api.auth.application.GoogleOAuthService;
 import com.terra.api.auth.application.PasswordResetService;
 import com.terra.api.common.domain.exception.ResourceConflictException;
 import com.terra.api.common.domain.exception.ResourceNotFoundException;
@@ -41,6 +47,8 @@ import com.terra.api.security.infrastructure.web.JwtCookieService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -52,11 +60,16 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 import java.time.Instant;
 import java.time.Duration;
+import java.util.UUID;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import org.springframework.http.ResponseCookie;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
+    private static final Logger LOGGER = LoggerFactory.getLogger(AuthController.class);
     private static final String TRUSTED_DEVICE_COOKIE_NAME = "terra_trusted_device";
     private static final Duration TRUSTED_DEVICE_COOKIE_MAX_AGE = Duration.ofDays(30);
 
@@ -71,6 +84,7 @@ public class AuthController {
     private final EmailVerificationService emailVerificationService;
     private final PasswordResetService passwordResetService;
     private final AccountSecurityService accountSecurityService;
+    private final GoogleOAuthService googleOAuthService;
     private final RealtimeSessionRevocationService realtimeSessionRevocationService;
     private final IdempotencyService idempotencyService;
     private final OpaqueTokenService opaqueTokenService;
@@ -86,6 +100,7 @@ public class AuthController {
                           EmailVerificationService emailVerificationService,
                           PasswordResetService passwordResetService,
                           AccountSecurityService accountSecurityService,
+                          GoogleOAuthService googleOAuthService,
                           RealtimeSessionRevocationService realtimeSessionRevocationService,
                           IdempotencyService idempotencyService,
                           OpaqueTokenService opaqueTokenService) {
@@ -100,6 +115,7 @@ public class AuthController {
         this.emailVerificationService = emailVerificationService;
         this.passwordResetService = passwordResetService;
         this.accountSecurityService = accountSecurityService;
+        this.googleOAuthService = googleOAuthService;
         this.realtimeSessionRevocationService = realtimeSessionRevocationService;
         this.idempotencyService = idempotencyService;
         this.opaqueTokenService = opaqueTokenService;
@@ -204,6 +220,217 @@ public class AuthController {
         return ResponseEntity.ok()
                 .headers(headers)
                 .body(ApiResponse.of("auth.login_success", messageResolver.get("auth.login_success"), new AuthSessionResponse(user)));
+    }
+
+    @PostMapping("/oauth/google")
+    public ResponseEntity<ApiResponse<AuthSessionResponse>> oauthGoogle(@Valid @RequestBody OAuthGoogleRequest request,
+                                                                        HttpServletRequest httpServletRequest) {
+        String traceId = UUID.randomUUID().toString();
+        System.out.println("[OAUTH-GOOGLE][STDOUT] endpoint=/api/auth/oauth/google stage=request traceId=" + traceId);
+        LOGGER.info(
+                "[OAUTH-GOOGLE] endpoint=/api/auth/oauth/google stage=request traceId={} idTokenFingerprint={} client={}",
+                traceId,
+                fingerprint(request.getIdToken()),
+                clientContext(httpServletRequest)
+        );
+
+        try {
+            AccountMaster accountMaster = googleOAuthService.authenticateIfLinked(request.getIdToken());
+            UserResponse user = authService.getCurrentUser(accountMaster.getEmail());
+
+            HttpHeaders headers = new HttpHeaders();
+            issueSession(headers, accountMaster, null, httpServletRequest);
+            csrfCookieService.addCookie(headers, csrfCookieService.generateToken());
+
+            LOGGER.info(
+                    "[OAUTH-GOOGLE] endpoint=/api/auth/oauth/google stage=success traceId={} accountId={} accountEmail={}",
+                    traceId,
+                    accountMaster.getId(),
+                    maskEmail(accountMaster.getEmail())
+            );
+            System.out.println("[OAUTH-GOOGLE][STDOUT] endpoint=/api/auth/oauth/google stage=success traceId=" + traceId + " accountId=" + accountMaster.getId());
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(ApiResponse.of("auth.login_success", messageResolver.get("auth.login_success"), new AuthSessionResponse(user)));
+        } catch (RuntimeException exception) {
+            LOGGER.warn(
+                    "[OAUTH-GOOGLE] endpoint=/api/auth/oauth/google stage=error traceId={} errorClass={} errorMessage={}",
+                    traceId,
+                    exception.getClass().getSimpleName(),
+                    exception.getMessage()
+            );
+            System.out.println("[OAUTH-GOOGLE][STDOUT] endpoint=/api/auth/oauth/google stage=error traceId=" + traceId + " error=" + exception.getClass().getSimpleName());
+            throw exception;
+        }
+    }
+
+    @PostMapping("/oauth/google/start")
+    public ResponseEntity<ApiResponse<OAuthGoogleStartResponse>> oauthGoogleStart(@Valid @RequestBody OAuthGoogleRequest request,
+                                                                                   HttpServletRequest httpServletRequest) {
+        String traceId = UUID.randomUUID().toString();
+        boolean hasRefreshCookie = extractCookieValue(httpServletRequest, jwtProperties.getRefreshCookieName()) != null;
+        System.out.println("[OAUTH-GOOGLE][STDOUT] endpoint=/api/auth/oauth/google/start stage=request traceId=" + traceId + " hasRefreshCookie=" + hasRefreshCookie);
+        LOGGER.info(
+                "[OAUTH-GOOGLE] endpoint=/api/auth/oauth/google/start stage=request traceId={} idTokenFingerprint={} hasRefreshCookie={} client={}",
+                traceId,
+                fingerprint(request.getIdToken()),
+                hasRefreshCookie,
+                clientContext(httpServletRequest)
+        );
+
+        try {
+            GoogleOAuthService.StartAuthenticationResult startResult = googleOAuthService.startAuthentication(request.getIdToken());
+
+            if (startResult.requiresEmailCode()) {
+                LOGGER.info(
+                        "[OAUTH-GOOGLE] endpoint=/api/auth/oauth/google/start stage=challenge_required traceId={} challengeId={} maskedEmail={}",
+                        traceId,
+                        startResult.challengeId(),
+                        startResult.maskedEmail()
+                );
+                System.out.println("[OAUTH-GOOGLE][STDOUT] endpoint=/api/auth/oauth/google/start stage=challenge_required traceId=" + traceId + " challengeId=" + startResult.challengeId());
+                return ResponseEntity.ok(
+                        ApiResponse.of(
+                                "auth.oauth_google_email_code_sent",
+                                messageResolver.get("auth.oauth_google_email_code_sent"),
+                                new OAuthGoogleStartResponse(
+                                        true,
+                                        startResult.challengeId(),
+                                        startResult.maskedEmail(),
+                                        null
+                                )
+                        )
+                );
+            }
+
+            AccountMaster accountMaster = startResult.account();
+            UserResponse user = authService.getCurrentUser(accountMaster.getEmail());
+
+            HttpHeaders headers = new HttpHeaders();
+            issueSession(headers, accountMaster, null, httpServletRequest);
+            csrfCookieService.addCookie(headers, csrfCookieService.generateToken());
+
+            LOGGER.info(
+                    "[OAUTH-GOOGLE] endpoint=/api/auth/oauth/google/start stage=authenticated traceId={} accountId={} accountEmail={}",
+                    traceId,
+                    accountMaster.getId(),
+                    maskEmail(accountMaster.getEmail())
+            );
+            System.out.println("[OAUTH-GOOGLE][STDOUT] endpoint=/api/auth/oauth/google/start stage=authenticated traceId=" + traceId + " accountId=" + accountMaster.getId());
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(ApiResponse.of(
+                            "auth.login_success",
+                            messageResolver.get("auth.login_success"),
+                            new OAuthGoogleStartResponse(false, null, null, new AuthSessionResponse(user))
+                    ));
+        } catch (RuntimeException exception) {
+            LOGGER.warn(
+                    "[OAUTH-GOOGLE] endpoint=/api/auth/oauth/google/start stage=error traceId={} errorClass={} errorMessage={}",
+                    traceId,
+                    exception.getClass().getSimpleName(),
+                    exception.getMessage()
+            );
+            System.out.println("[OAUTH-GOOGLE][STDOUT] endpoint=/api/auth/oauth/google/start stage=error traceId=" + traceId + " error=" + exception.getClass().getSimpleName());
+            throw exception;
+        }
+    }
+
+    @PostMapping("/oauth/google/verify-email-code")
+    public ResponseEntity<ApiResponse<AuthSessionResponse>> oauthGoogleVerifyEmailCode(
+            @Valid @RequestBody OAuthGoogleVerifyEmailCodeRequest request,
+            HttpServletRequest httpServletRequest) {
+        String traceId = UUID.randomUUID().toString();
+        int codeLength = request.getCode() == null ? 0 : request.getCode().trim().length();
+        System.out.println("[OAUTH-GOOGLE][STDOUT] endpoint=/api/auth/oauth/google/verify-email-code stage=request traceId=" + traceId + " challengeId=" + request.getChallengeId());
+        LOGGER.info(
+                "[OAUTH-GOOGLE] endpoint=/api/auth/oauth/google/verify-email-code stage=request traceId={} challengeId={} codeLength={} client={}",
+                traceId,
+                request.getChallengeId(),
+                codeLength,
+                clientContext(httpServletRequest)
+        );
+
+        try {
+            AccountMaster accountMaster = googleOAuthService.verifyEmailCodeAndAuthenticate(
+                    request.getChallengeId(),
+                    request.getCode()
+            );
+            UserResponse user = authService.getCurrentUser(accountMaster.getEmail());
+
+            HttpHeaders headers = new HttpHeaders();
+            issueSession(headers, accountMaster, null, httpServletRequest);
+            csrfCookieService.addCookie(headers, csrfCookieService.generateToken());
+
+            LOGGER.info(
+                    "[OAUTH-GOOGLE] endpoint=/api/auth/oauth/google/verify-email-code stage=success traceId={} accountId={} accountEmail={}",
+                    traceId,
+                    accountMaster.getId(),
+                    maskEmail(accountMaster.getEmail())
+            );
+            System.out.println("[OAUTH-GOOGLE][STDOUT] endpoint=/api/auth/oauth/google/verify-email-code stage=success traceId=" + traceId + " accountId=" + accountMaster.getId());
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(ApiResponse.of("auth.login_success", messageResolver.get("auth.login_success"), new AuthSessionResponse(user)));
+        } catch (RuntimeException exception) {
+            LOGGER.warn(
+                    "[OAUTH-GOOGLE] endpoint=/api/auth/oauth/google/verify-email-code stage=error traceId={} challengeId={} errorClass={} errorMessage={}",
+                    traceId,
+                    request.getChallengeId(),
+                    exception.getClass().getSimpleName(),
+                    exception.getMessage()
+            );
+            System.out.println("[OAUTH-GOOGLE][STDOUT] endpoint=/api/auth/oauth/google/verify-email-code stage=error traceId=" + traceId + " challengeId=" + request.getChallengeId() + " error=" + exception.getClass().getSimpleName());
+            throw exception;
+        }
+    }
+
+    @PostMapping("/oauth/google/resend-email-code")
+    public ResponseEntity<ApiResponse<OAuthGoogleEmailCodeChallengeResponse>> oauthGoogleResendEmailCode(
+            @Valid @RequestBody OAuthGoogleResendEmailCodeRequest request) {
+        String traceId = UUID.randomUUID().toString();
+        System.out.println("[OAUTH-GOOGLE][STDOUT] endpoint=/api/auth/oauth/google/resend-email-code stage=request traceId=" + traceId + " challengeId=" + request.getChallengeId());
+        LOGGER.info(
+                "[OAUTH-GOOGLE] endpoint=/api/auth/oauth/google/resend-email-code stage=request traceId={} challengeId={}",
+                traceId,
+                request.getChallengeId()
+        );
+
+        try {
+            GoogleOAuthService.ChallengeDetailsResult challengeDetails = googleOAuthService.resendEmailCode(request.getChallengeId());
+            OAuthGoogleEmailCodeChallengeResponse response = new OAuthGoogleEmailCodeChallengeResponse(
+                    challengeDetails.challengeId(),
+                    challengeDetails.maskedEmail()
+            );
+            LOGGER.info(
+                    "[OAUTH-GOOGLE] endpoint=/api/auth/oauth/google/resend-email-code stage=success traceId={} challengeId={} maskedEmail={}",
+                    traceId,
+                    challengeDetails.challengeId(),
+                    challengeDetails.maskedEmail()
+            );
+            System.out.println("[OAUTH-GOOGLE][STDOUT] endpoint=/api/auth/oauth/google/resend-email-code stage=success traceId=" + traceId + " challengeId=" + challengeDetails.challengeId());
+
+            return ResponseEntity.ok(
+                    ApiResponse.of(
+                            "auth.oauth_google_email_code_resent",
+                            messageResolver.get("auth.oauth_google_email_code_resent"),
+                            response
+                    )
+            );
+        } catch (RuntimeException exception) {
+            LOGGER.warn(
+                    "[OAUTH-GOOGLE] endpoint=/api/auth/oauth/google/resend-email-code stage=error traceId={} challengeId={} errorClass={} errorMessage={}",
+                    traceId,
+                    request.getChallengeId(),
+                    exception.getClass().getSimpleName(),
+                    exception.getMessage()
+            );
+            System.out.println("[OAUTH-GOOGLE][STDOUT] endpoint=/api/auth/oauth/google/resend-email-code stage=error traceId=" + traceId + " challengeId=" + request.getChallengeId() + " error=" + exception.getClass().getSimpleName());
+            throw exception;
+        }
     }
 
     @PostMapping("/refresh")
@@ -372,5 +599,64 @@ public class AuthController {
 
     private Instant nextRefreshExpiration() {
         return Instant.now().plus(Duration.ofDays(jwtProperties.getRefreshTokenExpirationDays()));
+    }
+
+    private String clientContext(HttpServletRequest request) {
+        String remoteAddr = request.getRemoteAddr();
+        String forwardedFor = headerOrDash(request, "X-Forwarded-For");
+        String origin = headerOrDash(request, "Origin");
+        String referer = headerOrDash(request, "Referer");
+        String userAgent = truncate(headerOrDash(request, "User-Agent"), 140);
+        return "remoteAddr=" + remoteAddr
+                + " xff=" + forwardedFor
+                + " origin=" + origin
+                + " referer=" + referer
+                + " ua=" + userAgent;
+    }
+
+    private String headerOrDash(HttpServletRequest request, String name) {
+        String value = request.getHeader(name);
+        if (value == null || value.isBlank()) {
+            return "-";
+        }
+        return value;
+    }
+
+    private String fingerprint(String value) {
+        if (value == null || value.isBlank()) {
+            return "empty";
+        }
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(value.getBytes(StandardCharsets.UTF_8));
+            StringBuilder builder = new StringBuilder();
+            for (int index = 0; index < 8 && index < hash.length; index++) {
+                builder.append(String.format("%02x", hash[index]));
+            }
+            return builder.toString();
+        } catch (NoSuchAlgorithmException exception) {
+            return "sha256-unavailable";
+        }
+    }
+
+    private String maskEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return "***";
+        }
+        int at = email.indexOf('@');
+        if (at <= 1 || at == email.length() - 1) {
+            return "***";
+        }
+        return email.charAt(0) + "***" + email.substring(at);
+    }
+
+    private String truncate(String value, int maxLength) {
+        if (value == null) {
+            return "-";
+        }
+        if (value.length() <= maxLength) {
+            return value;
+        }
+        return value.substring(0, maxLength);
     }
 }
